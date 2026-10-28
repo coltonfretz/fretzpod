@@ -1,0 +1,22 @@
+{
+  "why": "The only servers TV may stream from. deploy.sh writes these into the page's Content Security Policy, and tv.js hides any channel whose stream lives elsewhere, so the page never talks to arbitrary sites. Wildcards only for the streaming companies' own domains; shared clouds (amazonaws.com) are listed host by host, since anyone can rent a host there. A channel that moves to a new server disappears from the list until its server is added here and deployed. Checked against the full lineup 2026-10-24: 124 of 126 channels.",
+  "hosts": [
+    "*.amagi.tv",
+    "*.wurl.tv",
+    "*.wurl.com",
+    "*.getpublica.com",
+    "*.frequency.stream",
+    "*.galxy.tv",
+    "*.tubi.video",
+    "*.uplynk.com",
+    "*.klowdtv.com",
+    "*.kaltura.com",
+    "*.ottera.tv",
+    "*.unitedteleports.tv",
+    "*.cbsnews.com",
+    "4aafa23ec0a6477ca31466bd83a115a4.mediatailor.us-west-2.amazonaws.com",
+    "66fbef2650a94f95ad9eb85816482b11.mediatailor.us-west-2.amazonaws.com",
+    "88794468e8cd4ffbb3ad6d5a6ef7c4a5.mediatailor.us-west-2.amazonaws.com",
+    "a28dc5e3f24c4a8da3a67c68be729c2c.mediatailor.us-west-2.amazonaws.com"
+  ]
+}

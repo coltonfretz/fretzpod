@@ -1,0 +1,41 @@
+# Fretzpod with Docker Compose. From the repo root:
+#   mkdir site && cp examples/docker/site.json site/   (then edit site/site.json)
+#   python3 build.py
+#   docker compose -f examples/docker/compose.yml up -d
+# Then open http://<this machine>:8080. Rebuild and restart web after edits.
+#
+# Paths below are relative to this file. Speakers (Sonos through Home
+# Assistant) is left out here; see the README and examples/kubernetes/speakers.yaml
+# for what it needs.
+services:
+  web:
+    image: nginxinc/nginx-unprivileged:1.30.6-alpine3.24
+    ports: ["8080:8080"]
+    volumes:
+      - ../../build/html:/usr/share/nginx/html:ro
+      - ../../build/vendor:/usr/share/nginx/vendor:ro
+      - ../../build/default.conf:/etc/nginx/conf.d/default.conf:ro
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+
+  # High Scores (optional). Remove this and "scores" from site.json to go without.
+  scores:
+    image: python:3.13.17-alpine3.24
+    command: ["python", "-u", "/app/scores.py"]
+    environment:
+      PYTHONDONTWRITEBYTECODE: "1"
+      # Jellyfin as this container can reach it (used to check who's signed in).
+      JF_URL: "https://jellyfin.example.com"
+    volumes:
+      - ../../scores/scores.py:/app/scores.py:ro
+      - scores-data:/data
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+
+volumes:
+  scores-data:

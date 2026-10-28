@@ -1,0 +1,87 @@
+# fretzpod-scores: the shared high score boards for Vortex and Space Sheep.
+# See DESIGN.md, "High scores", and scores/scores.py. Optional: copy to
+# site/scores.yaml to deploy it, and set helpers.scores in site.json.
+#
+# The code is the ConfigMap `fretzpod-scores-code` (deploy.sh). No Secret:
+# it checks who's asking with the phone's own Jellyfin sign-in. The boards
+# live in one small JSON file on a small volume. Losing it loses only the boards.
+#
+# No Service of type NodePort: only Fretzpod's nginx talks to it, inside the
+# cluster.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: fretzpod-scores
+  namespace: fretzpod
+spec:
+  accessModes: [ReadWriteOnce]
+  # storageClassName: local-path   # or leave out for the cluster default
+  resources:
+    requests: {storage: 64Mi}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fretzpod-scores
+  namespace: fretzpod
+spec:
+  replicas: 1
+  # One writer at a time on a node-local volume: the old pod stops before the
+  # new one starts.
+  strategy: {type: Recreate}
+  selector:
+    matchLabels: {app: fretzpod-scores}
+  template:
+    metadata:
+      labels: {app: fretzpod-scores}
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        fsGroup: 65534
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+      - name: scores
+        image: python:3.13.17-alpine3.24
+        command: ["python", "-u", "/app/scores.py"]
+        env:
+        - {name: PYTHONDONTWRITEBYTECODE, value: "1"}
+        # Jellyfin as the cluster can reach it.
+        - {name: JF_URL, value: "http://jellyfin.jellyfin.svc.cluster.local:8096"}
+        ports:
+        - {containerPort: 8080, name: http}
+        readinessProbe:
+          httpGet: {path: /healthz, port: 8080}
+          periodSeconds: 10
+        livenessProbe:
+          httpGet: {path: /healthz, port: 8080}
+          initialDelaySeconds: 10
+          periodSeconds: 30
+        resources:
+          requests: {cpu: 5m, memory: 24Mi}
+          limits: {cpu: 200m, memory: 64Mi}
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities: {drop: ["ALL"]}
+        volumeMounts:
+        - {name: code, mountPath: /app, readOnly: true}
+        # The whole volume, no subPath (subPath on local-path volumes breaks on Talos).
+        - {name: data, mountPath: /data}
+      volumes:
+      - name: code
+        configMap: {name: fretzpod-scores-code}
+      - name: data
+        persistentVolumeClaim: {claimName: fretzpod-scores}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fretzpod-scores
+  namespace: fretzpod
+spec:
+  selector: {app: fretzpod-scores}
+  ports:
+  - {name: http, port: 8080, targetPort: 8080}

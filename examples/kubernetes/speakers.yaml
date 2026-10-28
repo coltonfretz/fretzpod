@@ -1,0 +1,84 @@
+# fretzpod-speakers: Fretzpod on Sonos speakers through Home Assistant.
+# Optional. See DESIGN.md, "Speakers", and speakers/speakers.py. To use it:
+# copy to site/speakers.yaml, fill in the env values below, set
+# helpers.speakers in site.json, and make the Secret once with
+# speakers/make-secret.sh.
+#
+# The code is the ConfigMap `fretzpod-speakers-code` (deploy.sh); the secrets
+# are the Secret `fretzpod-speakers` (speakers/make-secret.sh, run once):
+# HA_TOKEN (a non-admin Home Assistant user's token), JF_KEY (its own
+# Jellyfin key, "Fretzpod speakers") and SIGN_KEY (signs the song links
+# handed to the speakers).
+#
+# No Service of type NodePort: only Fretzpod's nginx talks to it, inside the
+# cluster.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fretzpod-speakers
+  namespace: fretzpod
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: fretzpod-speakers}
+  template:
+    metadata:
+      labels: {app: fretzpod-speakers}
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+      - name: speakers
+        image: python:3.13.17-alpine3.24
+        command: ["python", "-u", "/app/speakers.py"]
+        env:
+        - {name: PYTHONDONTWRITEBYTECODE, value: "1"}
+        - {name: HA_URL, value: "http://homeassistant.local:8123"}
+        - {name: JF_URL, value: "http://jellyfin.jellyfin.svc.cluster.local:8096"}
+        # Jellyfin user ids (comma-separated) that get the Speakers menu.
+        # Dashboard > Users > a user: the id is in the page address.
+        - {name: ALLOWED_USERS, value: "<your Jellyfin user id>"}
+        # Home Assistant media_player entity = the speaker's LAN address, one
+        # per speaker (state is read from the speaker itself; speakers.py).
+        # Give the speakers fixed addresses (DHCP reservations).
+        - {name: SPEAKERS, value: "media_player.kitchen=192.168.1.20,media_player.living_room=192.168.1.21"}
+        # An address of Fretzpod the speakers can reach; they download songs
+        # from <PUBLIC_BASE>/speakers/audio/.
+        - {name: PUBLIC_BASE, value: "https://fretzpod.example.com"}
+        envFrom:
+        - secretRef: {name: fretzpod-speakers}
+        ports:
+        - {containerPort: 8080, name: http}
+        readinessProbe:
+          httpGet: {path: /healthz, port: 8080}
+          periodSeconds: 10
+        livenessProbe:
+          httpGet: {path: /healthz, port: 8080}
+          initialDelaySeconds: 10
+          periodSeconds: 30
+        resources:
+          requests: {cpu: 10m, memory: 32Mi}
+          limits: {cpu: 500m, memory: 128Mi}
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities: {drop: ["ALL"]}
+        volumeMounts:
+        - {name: code, mountPath: /app, readOnly: true}
+      volumes:
+      - name: code
+        configMap: {name: fretzpod-speakers-code}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fretzpod-speakers
+  namespace: fretzpod
+spec:
+  selector: {app: fretzpod-speakers}
+  ports:
+  - {name: http, port: 8080, targetPort: 8080}

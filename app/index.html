@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#d4d6da">
+<title>Fretzpod</title>
+<link rel="stylesheet" href="pod.css">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Fretzpod">
+<!-- No inline script or style anywhere: the Content Security Policy (nginx
+     default.conf) only allows files served by this pod. -->
+<script type="module" src="main.js"></script>
+</head>
+<body>
+<div id="pod">
+  <div id="bezel">
+    <div id="screen">
+      <div class="bar">
+        <span class="bar-state"></span>
+        <span class="bar-title"></span>
+        <span class="bar-batt" hidden><span class="batt-fill"></span></span>
+      </div>
+      <div class="views"></div>
+    </div>
+  </div>
+
+  <div id="wheel-area">
+    <div id="wheel">
+      <span class="wl wl-menu">MENU</span>
+      <span class="wl wl-next">
+        <svg viewBox="0 0 24 12" aria-label="Next"><path d="M0 0 L9 6 L0 12Z M9 0 L18 6 L9 12Z M19 0 h2.5 v12 H19Z"/></svg>
+      </span>
+      <span class="wl wl-prev">
+        <svg viewBox="0 0 24 12" aria-label="Previous"><path d="M24 0 L15 6 L24 12Z M15 0 L6 6 L15 12Z M2.5 0 h2.5 v12 H2.5Z"/></svg>
+      </span>
+      <span class="wl wl-play">
+        <svg viewBox="0 0 24 12" aria-label="Play or pause"><path d="M2 0 L11 6 L2 12Z M14 0 h3 v12 h-3Z M19.5 0 h3 v12 h-3Z"/></svg>
+      </span>
+      <div id="center"></div>
+    </div>
+  </div>
+</div>
+
+<div id="coverflow" hidden></div>
+
+<div id="pw-overlay" hidden>
+  <form id="pw-form">
+    <h2>Sign in to <span id="server-name">Jellyfin</span></h2>
+    <input id="pw-user" autocomplete="username" placeholder="Username" required>
+    <input id="pw-pass" type="password" autocomplete="current-password" placeholder="Password">
+    <p id="pw-error"></p>
+    <div class="pw-buttons">
+      <button type="button" id="pw-cancel">Cancel</button>
+      <button type="submit">Sign in</button>
+    </div>
+  </form>
+</div>
+
+<audio id="audio" preload="auto"></audio>
+</body>
+</html>

@@ -1,0 +1,14 @@
+{
+  "serverName": "My Jellyfin",
+  "purpleName": "Purple",
+  "jellyfin": {
+    "default": "https://jellyfin.example.com",
+    "byHost": { "fretzpod.home.example": "http://jellyfin.home.example:8096" }
+  },
+  "helpers": {
+    "resolver": "10.96.0.10",
+    "scores": "http://fretzpod-scores.fretzpod.svc.cluster.local:8080",
+    "speakers": "http://fretzpod-speakers.fretzpod.svc.cluster.local:8080"
+  },
+  "namespace": "fretzpod"
+}

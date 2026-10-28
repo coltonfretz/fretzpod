@@ -1,0 +1,435 @@
+/* Fretzpod: an iPod Classic (6th/7th gen look) filling the phone.
+   Screen sizes use container units (cqh/cqw) relative to the screen, so the
+   whole UI scales with whatever size the screen ends up on a given phone. */
+
+/* ---------- body colors (Settings > Body) ---------- */
+/* The iPod's blue selection, shared by everything that highlights a pick. */
+:root { --sel: linear-gradient(#5aa7f3, #1d6cd0); }
+
+:root, :root[data-body="silver"] {
+  --body-top: #eef0f2; --body-bot: #c2c5ca;
+  --wheel-hi: #ffffff; --wheel: #e9eaec; --wheel-edge: #c9ccd0;
+  --center-hi: #f1f2f4; --center: #cfd2d6;
+  --label: #a3a6ab;
+}
+:root[data-body="black"] {
+  --body-top: #2a2a2e; --body-bot: #0c0c0e;
+  --wheel-hi: #3a3a3e; --wheel: #26262a; --wheel-edge: #121214;
+  --center-hi: #2b2b2f; --center: #18181b;
+  --label: #c8c8cc;
+}
+/* Blue and red: the colored iPod nanos. Anodized
+   body, white click wheel, the way Apple did them, (PRODUCT)RED included. */
+:root[data-body="blue"] {
+  --body-top: #5b9be6; --body-bot: #1c4f9e;
+  --wheel-hi: #ffffff; --wheel: #eceef1; --wheel-edge: #c4c9d1;
+  --center-hi: #f3f4f6; --center: #d3d7dc;
+  --label: #9aa1ab;
+}
+:root[data-body="red"] {
+  --body-top: #e8424a; --body-bot: #8e0f17;
+  --wheel-hi: #ffffff; --wheel: #eeecec; --wheel-edge: #cfc6c6;
+  --center-hi: #f4f3f3; --center: #d8d3d3;
+  --label: #a59c9c;
+}
+:root[data-body="purple"] {
+  --body-top: #3a1d66; --body-bot: #140a26;
+  --wheel-hi: #4b2a7e; --wheel: #34195b; --wheel-edge: #1c0d33;
+  --center-hi: #3a1f65; --center: #241140;
+  --label: #dccdff;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  background: linear-gradient(var(--body-top), var(--body-bot));
+  overflow: hidden;
+  user-select: none; -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#pod {
+  height: 100dvh;
+  display: flex; flex-direction: column; align-items: center;
+  padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+  gap: 3dvh;
+}
+
+/* ---------- the screen ---------- */
+#bezel {
+  /* Never more than about half the window's height, so the wheel always gets
+     room (short laptop windows); phones in portrait never hit this cap. */
+  width: min(100%, 520px, 52dvh * 4 / 3);
+  aspect-ratio: 4 / 3;
+  flex: none;
+  background: #0b0b0c;
+  border-radius: 10px;
+  padding: 2.4%;
+  box-shadow: inset 0 0 0 1px #2b2b2e, 0 1px 0 rgba(255,255,255,.35);
+}
+#screen {
+  container-type: size;
+  width: 100%; height: 100%;
+  background: #fff;
+  border-radius: 3px;
+  overflow: hidden;
+  display: flex; flex-direction: column;
+  color: #000;
+  position: relative;      /* for the big letter (.letter) */
+}
+
+.bar {
+  flex: none;
+  height: 11cqh;
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+  padding: 0 3cqw;
+  background: linear-gradient(#fdfdfd, #cfd2d7);
+  border-bottom: 1px solid #9ea1a6;
+  font-size: 6cqh; font-weight: 700; color: #1b1b1b;
+}
+.bar-title { text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 62cqw; }
+.bar-state { justify-self: start; font-size: 4.6cqh; color: #2f6fc9; }
+.bar-batt {
+  justify-self: end; position: relative;
+  width: 7.5cqw; height: 4.4cqh;
+  border: 1.5px solid #4d4f53; border-radius: 2px; padding: 1px;
+}
+.bar-batt::after {
+  content: ""; position: absolute; right: -0.9cqw; top: 30%; height: 40%; width: 0.6cqw;
+  background: #4d4f53; border-radius: 0 1px 1px 0;
+}
+.bar-batt[hidden] { display: none; }
+.batt-fill { display: block; height: 100%; background: linear-gradient(#a6e675, #46ad2c); }
+.bar-batt.low .batt-fill { background: linear-gradient(#f07d70, #cf3a2c); }
+
+.views { position: relative; flex: 1; overflow: hidden; }
+.view { position: absolute; inset: 0; display: flex; background: #fff; }
+
+/* ---------- menus ---------- */
+.list { flex: 1; min-width: 0; display: grid; grid-template-rows: repeat(8, 1fr); }
+.view.split .list { flex: 0 0 50%; }
+.row {
+  display: flex; align-items: center; gap: 1.5cqw; min-width: 0;
+  padding: 0 2.5cqw 0 3cqw;
+  font-size: 5.6cqh; font-weight: 700;
+}
+.row .text { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row .sub { font-weight: 400; color: #77797e; margin-left: 1.6cqw; font-size: .85em; }
+.row .value { flex: none; font-weight: 400; color: #4b4d52; }
+.row .arrow { flex: none; font-size: 1.25em; line-height: 1; }
+.row.sel { background: var(--sel); color: #fff; }
+.row.sel .sub, .row.sel .value { color: #dde9ff; }
+.note {
+  grid-row: 1 / span 8;
+  display: grid; place-items: center; text-align: center;
+  padding: 0 7cqw; color: #55575c; font-size: 5.4cqh;
+}
+.scroll {
+  flex: none; width: 2.6cqw; position: relative;
+  background: linear-gradient(90deg, #d6d8dc, #f3f4f6);
+  border-left: 1px solid #b7babe;
+}
+.thumb {
+  position: absolute; left: 0; right: 0;
+  background: linear-gradient(90deg, #6aa6ea, #2c6dc4);
+  border-radius: 1cqw;
+}
+
+/* The main menu's right half: album covers drifting and crossfading. */
+.art-pane { flex: 0 0 50%; position: relative; overflow: hidden; background: #111; border-left: 1px solid #8f9297; }
+.art-pane img {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+  opacity: 0; transition: opacity 1.4s ease;
+}
+.art-pane img.on { opacity: 1; }
+.drift-a { animation: drift-a 9s linear forwards; }
+.drift-b { animation: drift-b 9s linear forwards; }
+@keyframes drift-a { from { transform: scale(1.05) translate(2%, 2%); } to { transform: scale(1.25) translate(-4%, -3%); } }
+@keyframes drift-b { from { transform: scale(1.25) translate(-3%, 3%); } to { transform: scale(1.05) translate(3%, -2%); } }
+
+/* ---------- Now Playing ---------- */
+.np { flex: 1; min-width: 0; display: flex; flex-direction: column; padding: 2.5cqh 4cqw 3.5cqh; gap: 2cqh; position: relative; perspective: 900px; }
+/* The art side and the lyrics side: one card a swipe turns over (ui.js flip). */
+.np-card { flex: 1; min-height: 0; display: flex; flex-direction: column; touch-action: none; }
+.np-count { font-size: 4.6cqh; font-weight: 700; color: #333; }
+.np-main { flex: 1; min-height: 0; display: flex; align-items: center; gap: 4cqw; }
+.np-art {
+  flex: none; width: 46cqh; height: 46cqh;
+  box-shadow: 0 1px 3px rgba(0,0,0,.35);
+  -webkit-box-reflect: below 1px linear-gradient(transparent 72%, rgba(0,0,0,.22));
+  background: #d9dbde;
+  position: relative;      /* for the heart */
+}
+.np-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* A favorite: a small heart in the corner of the art (a marker, not a button). */
+.np-heart {
+  display: none; position: absolute; right: 1.2cqh; bottom: 1.2cqh;
+  width: 8.5cqh; height: 8.5cqh; border-radius: 50%;
+  align-items: center; justify-content: center;
+  background: rgba(255,255,255,.94); box-shadow: 0 .3cqh 1cqh rgba(0,0,0,.4);
+  font-size: 6cqh; line-height: 1; color: #ff3b5c;
+}
+.np-heart.on { display: flex; }
+/* Holding center: a big heart blooms and fades. */
+.np-pop {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 1cqh; pointer-events: none;
+}
+.np-pop-heart { font-size: 40cqh; line-height: 1; color: #a9acb2; text-shadow: 0 .5cqh 2cqh rgba(0,0,0,.25); }
+.np-pop.on .np-pop-heart { color: #ff3b5c; }
+.np-pop-text {
+  font-size: 4.8cqh; font-weight: 700; color: #1b1b1b;
+  background: rgba(255,255,255,.9); padding: .6cqh 2.5cqw; border-radius: 1.2cqh;
+}
+.np-art img.missing { visibility: hidden; }
+.np-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1.2cqh; }
+.np-title, .np-artist, .np-album { overflow: hidden; text-overflow: ellipsis; }
+.np-title {
+  font-size: 5.6cqh; font-weight: 700;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+.np-artist, .np-album { font-size: 5cqh; color: #2c2d30; white-space: nowrap; }
+.np-bottom { flex: none; }
+.np-bottom.volume { display: flex; align-items: center; gap: 2cqw; padding: 1.4cqh 0; }
+.np-bottom.volume .meter { flex: 1; }
+.vol-icon { font-size: 4.6cqh; }
+.meter {
+  position: relative; height: 2.8cqh;
+  border: 1px solid #898c91; border-radius: 1px;
+  background: linear-gradient(#f5f6f8, #d6d8dc);
+}
+.fill { height: 100%; background: linear-gradient(#80b8f3, #2869cb); }
+.knob {
+  position: absolute; top: 50%; width: 3.2cqh; height: 3.2cqh;
+  background: #fff; border: 1px solid #4c4e52;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+.np-times { display: flex; justify-content: space-between; margin-top: 1.2cqh; font-size: 4.4cqh; font-weight: 700; }
+
+/* ---------- Quick Connect ---------- */
+.qc {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 3cqh; padding: 4cqh 7cqw; text-align: center; font-size: 5cqh;
+}
+.qc p { margin: 0; }
+.qc-code { font-size: 15cqh; font-weight: 800; letter-spacing: 1.5cqw; color: #1d6cd0; }
+
+/* ---------- the click wheel ---------- */
+#wheel-area { flex: 1; width: 100%; min-height: 0; display: grid; place-items: center; container-type: size; }
+#wheel {
+  --d: min(84cqw, 94cqh, 420px);
+  position: relative;
+  width: var(--d); height: var(--d);
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 40%, var(--wheel-hi), var(--wheel) 70%);
+  box-shadow: inset 0 0 0 1px var(--wheel-edge), 0 1px 1px rgba(255,255,255,.25), 0 2px 6px rgba(0,0,0,.18);
+  touch-action: none;
+}
+#center {
+  position: absolute; inset: 32%;
+  border-radius: 50%;
+  background: linear-gradient(var(--center-hi), var(--center));
+  box-shadow: inset 0 0 0 1px var(--wheel-edge), 0 1px 2px rgba(0,0,0,.15);
+  touch-action: none;
+}
+#center.pressed { filter: brightness(.9); }
+.wl {
+  position: absolute; pointer-events: none;
+  color: var(--label);
+  font-weight: 700; font-size: calc(var(--d) * 0.068); line-height: 1;
+  letter-spacing: .04em;
+  transition: opacity .1s;
+}
+.wl svg { display: block; width: calc(var(--d) * 0.1); fill: currentColor; }
+.wl-menu { top: 9.5%; left: 50%; transform: translateX(-50%); }
+.wl-play { bottom: 10%; left: 50%; transform: translateX(-50%); }
+.wl-next { right: 7%; top: 50%; transform: translateY(-50%); }
+.wl-prev { left: 7%; top: 50%; transform: translateY(-50%); }
+#wheel.pressed-menu .wl-menu, #wheel.pressed-play .wl-play,
+#wheel.pressed-next .wl-next, #wheel.pressed-prev .wl-prev { opacity: .45; }
+
+/* On a computer (mouse, wide window) the iPod stands upright in the middle.
+   Sideways phones get Cover Flow instead (below). */
+@media (orientation: landscape) and (pointer: fine) {
+  #pod { width: min(460px, 100%); margin: 0 auto; }
+}
+
+/* ---------- Cover Flow ---------- */
+body.cf-on #pod { display: none; }
+#coverflow {
+  --s: min(54vh, 30vw);
+  position: fixed; inset: 0; overflow: hidden;
+  background: radial-gradient(ellipse at 50% 40%, #222327, #000 75%);
+  perspective: 1100px;
+  touch-action: none;
+}
+#coverflow[hidden] { display: none; }
+.cf-stage { position: absolute; left: 50%; top: 45%; width: 0; height: 0; transform-style: preserve-3d; }
+.cf-letters {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 2000;
+  display: flex; justify-content: space-between;
+  padding: 1.6vh 3vw 2.4vh;
+  font-size: 3.4vh; font-weight: 700; color: #6e7076;
+  touch-action: none;
+}
+.cf-letters span { flex: 1; text-align: center; transition: color .12s, transform .12s; }
+.cf-letters span.empty { opacity: .3; }
+.cf-letters span.on { color: #fff; transform: scale(1.35); }
+.cf-cover {
+  position: absolute; width: var(--s); height: var(--s);
+  left: calc(var(--s) / -2); top: calc(var(--s) / -2);
+  background: #2a2b2f;
+  -webkit-box-reflect: below 2px linear-gradient(transparent 62%, rgba(255,255,255,.26));
+}
+.cf-cover img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
+.cf-caption { position: absolute; left: 0; right: 0; bottom: 6vh; text-align: center; color: #fff; pointer-events: none; }
+.cf-title { font-size: 4.8vh; font-weight: 700; padding: 0 8vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cf-artist { font-size: 3.8vh; color: #a9abb0; margin-top: .6vh; }
+.cf-back {
+  position: absolute; top: 6vh; bottom: 6vh; left: 0; right: 0; margin: 0 auto;
+  width: min(80vh, 62vw);
+  display: flex; flex-direction: column;
+  background: #fff; color: #000; border-radius: 6px; overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0,0,0,.6);
+}
+.cf-back[hidden] { display: none; }
+.cf-back-head {
+  flex: none; padding: 1.6vh 3vh; text-align: center; cursor: pointer;
+  background: linear-gradient(#fdfdfd, #cfd2d7); border-bottom: 1px solid #9ea1a6;
+}
+.cf-back-title { font-weight: 700; font-size: 4.2vh; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cf-back-artist { font-size: 3.4vh; color: #55575c; }
+.cf-tracks { flex: 1; overflow-y: auto; touch-action: pan-y; }
+.cf-track { display: flex; gap: 2vh; align-items: center; padding: 1.5vh 3vh; border-bottom: 1px solid #e4e5e8; font-size: 3.8vh; }
+.cf-track .n { width: 4vh; color: #77797e; text-align: right; }
+.cf-track .name { flex: 1; min-width: 0; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cf-track .t { color: #55575c; }
+.cf-track.on { background: var(--sel); color: #fff; }
+.cf-track.on .n, .cf-track.on .t { color: #dde9ff; }
+.cf-loading { padding: 4vh; text-align: center; color: #55575c; font-size: 3.8vh; }
+
+/* ---------- password sign-in ---------- */
+#pw-overlay {
+  position: fixed; inset: 0; z-index: 10;
+  display: grid; place-items: center;
+  background: rgba(0, 0, 0, .55);
+  padding: 16px;
+}
+#pw-overlay[hidden] { display: none; }
+#pw-form {
+  width: min(100%, 360px);
+  background: #fff; color: #111; border-radius: 14px; padding: 20px;
+  user-select: text; -webkit-user-select: text;
+}
+#pw-form h2 { margin: 0 0 12px; font-size: 18px; }
+#pw-form input {
+  display: block; width: 100%; margin: 8px 0; padding: 12px;
+  font-size: 16px; border: 1px solid #b8bbc0; border-radius: 8px;
+}
+#pw-error { min-height: 1.2em; margin: 4px 0; color: #c0392b; font-size: 14px; }
+.pw-buttons { display: flex; gap: 8px; justify-content: flex-end; }
+.pw-buttons button {
+  font-size: 16px; padding: 10px 16px; border-radius: 8px;
+  border: 1px solid #b8bbc0; background: #f2f3f5; color: #111;
+}
+.pw-buttons button[type="submit"] { background: #1d6cd0; border-color: #1d6cd0; color: #fff; }
+
+/* The big letter while spinning fast through a long list. */
+.letter {
+  position: absolute; left: 50%; top: 55%;
+  transform: translate(-50%, -50%);
+  min-width: 26cqh; padding: 2cqh 4cqh;
+  border-radius: 3cqh;
+  background: rgba(30, 32, 36, .78); color: #fff;
+  font-size: 18cqh; font-weight: 800; text-align: center; line-height: 1.1;
+  opacity: 0; transition: opacity .25s; pointer-events: none;
+}
+.letter.on { opacity: 1; transition: none; }
+
+/* ---------- Search ---------- */
+.search { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.search-query {
+  flex: none; height: 12cqh; display: flex; align-items: center; gap: .6cqw;
+  padding: 0 3cqw; border-bottom: 1px solid #c9ccd0;
+  font-size: 6cqh; font-weight: 700;
+}
+.search-query .q { white-space: pre; overflow: hidden; }
+.caret { width: .5cqw; height: 6.5cqh; background: #1d6cd0; animation: blink 1s steps(1) infinite; }
+.in-results .caret { visibility: hidden; }
+@keyframes blink { 50% { opacity: 0; } }
+.search-status { margin-left: auto; font-size: 4.2cqh; font-weight: 400; color: #77797e; white-space: nowrap; }
+.search-results { flex: 1; min-height: 0; display: flex; }
+.search-results .list { grid-template-rows: repeat(5, 1fr); }
+.search-results .note { grid-row: auto; flex: 1; font-size: 4.8cqh; }
+.keys {
+  flex: none; height: 13cqh; display: flex; align-items: center; justify-content: space-between;
+  padding: 0 2cqw; border-top: 1px solid #b7babe;
+  background: linear-gradient(#f4f5f7, #d9dbdf);
+}
+.in-results .keys { opacity: .45; }
+.key { min-width: 6.5cqw; text-align: center; font-size: 5.6cqh; font-weight: 700; color: #3a3c40; padding: .8cqh .6cqw; border-radius: .8cqw; }
+.key.word { font-size: 4.4cqh; }
+.key.on { background: var(--sel); color: #fff; }
+
+/* ---------- Lyrics (Now Playing: the back of the card) ---------- */
+.np-lyrics { display: none; flex: 1; min-height: 0; overflow: hidden; position: relative; }
+.np.lyrics-on .np-main { display: none; }
+.np.lyrics-on .np-lyrics { display: block; }
+.np-lyrics .lines { transition: transform .45s ease; }
+.np-lyrics .line { font-size: 5.2cqh; line-height: 1.35; color: #8a8c91; padding: .4cqh 0; text-align: center; }
+.np-lyrics .line.now { color: #000; font-weight: 700; }
+/* Word timing: the current line's words go dark as they're sung. */
+.np-lyrics .line.now.worded { color: #8a8c91; }
+.np-lyrics .line.now.worded .w.sung { color: #000; }
+.np-lyrics .w { transition: color .12s linear; }
+
+/* ---------- canvas games (util.js runCanvas) ---------- */
+canvas.game { flex: 1; width: 100%; height: 100%; display: block; }
+
+/* ---------- high score name picker ---------- */
+.name-entry {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 5cqh; padding: 0 5cqw;
+}
+.ne-name {
+  font-size: 11cqh; font-weight: 700; letter-spacing: .08em; color: #1b1b1b;
+  white-space: pre; border-bottom: .5cqh solid #c9ccd2; padding: 0 2cqw .5cqh; min-width: 40cqw; text-align: center;
+}
+.ne-cur {
+  display: inline-block; min-width: 1em; margin-left: .05em; border-radius: .6cqh;
+  background: var(--sel); color: #fff; text-align: center;
+}
+.ne-cur.ne-act { padding: 0 .15em; }
+.ne-note { font-size: 5cqh; color: #55575c; min-height: 6cqh; }
+
+/* ---------- TV (tv.js) ---------- */
+/* The stage (picture + banner + info) sits in the iPod screen, or in .tv-full
+   over the whole phone when it's sideways. Sizes use the stage's own
+   container units, so the overlays scale with whichever it's in. */
+.tv { flex: 1; position: relative; background: #000; }
+.tv-stage { position: absolute; inset: 0; background: #000; overflow: hidden; container-type: size; touch-action: none; }
+.tv-video { width: 100%; height: 100%; display: block; object-fit: contain; background: #000; }
+.tv-banner {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  display: flex; align-items: center; gap: 3cqw; padding: 4cqh 4cqw;
+  background: linear-gradient(transparent, rgba(0, 0, 0, .85));
+  color: #fff; opacity: 0; transition: opacity .3s; pointer-events: none;
+}
+.tv-banner.on { opacity: 1; }
+.tv-logo { height: 13cqh; max-width: 20cqw; object-fit: contain; flex: none; }
+.tv-banner-text { min-width: 0; }
+.tv-name, .tv-now { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tv-name { font-weight: 700; font-size: 7cqh; }
+.tv-now { font-size: 5.5cqh; opacity: .8; }
+.tv-info {
+  position: absolute; left: 0; right: 0; top: 0; padding: 4cqh 4cqw 8cqh;
+  background: linear-gradient(rgba(0, 0, 0, .85), transparent);
+  color: #fff; font-size: 5.5cqh; opacity: 0; transition: opacity .3s; pointer-events: none;
+}
+.tv-info.on { opacity: 1; }
+.tv-info-row { display: flex; gap: 3cqw; white-space: nowrap; overflow: hidden; }
+.tv-info-when { flex: none; min-width: 14cqw; opacity: .7; }
+.tv-info-title { overflow: hidden; text-overflow: ellipsis; }
+.tv-full { position: fixed; inset: 0; z-index: 100; background: #000; }

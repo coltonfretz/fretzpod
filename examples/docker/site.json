@@ -1,0 +1,11 @@
+{
+  "serverName": "My Jellyfin",
+  "jellyfin": {
+    "default": "https://jellyfin.example.com",
+    "byHost": {}
+  },
+  "helpers": {
+    "resolver": "127.0.0.11",
+    "scores": "http://scores:8080"
+  }
+}

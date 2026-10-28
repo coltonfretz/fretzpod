@@ -1,0 +1,109 @@
+# Fretzpod: iPod Classic-style music player for Jellyfin. See DESIGN.md.
+# The app files are the ConfigMap `fretzpod-app` (hls.js separately in
+# `fretzpod-vendor`) and the nginx config is `fretzpod-nginx`, all made by
+# deploy.sh, so there is no image to build.
+#
+# Example: copy to site/fretzpod.yaml, create the namespace
+# (kubectl create namespace fretzpod) and change the Ingress to your own.
+# Drop the Ingress and ExternalName Service if you only use the NodePort.
+#
+# Nothing secret lives here: no Jellyfin key, no ServiceAccount token. Each
+# person signs in to Jellyfin from their own browser.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fretzpod
+  namespace: fretzpod
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: fretzpod}
+  template:
+    metadata:
+      labels: {app: fretzpod}
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101          # the image's nginx user
+        runAsGroup: 101
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+      - name: web
+        # Exact tag: a moving tag never updates with IfNotPresent.
+        image: nginxinc/nginx-unprivileged:1.30.6-alpine3.24
+        ports:
+        - {containerPort: 8080, name: http}
+        readinessProbe:
+          httpGet: {path: /healthz, port: 8080}
+          periodSeconds: 10
+        livenessProbe:
+          httpGet: {path: /healthz, port: 8080}
+          initialDelaySeconds: 10
+          periodSeconds: 30
+        resources:
+          requests: {cpu: 5m, memory: 16Mi}
+          limits: {cpu: 200m, memory: 64Mi}
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities: {drop: ["ALL"]}
+        volumeMounts:
+        - {name: app, mountPath: /usr/share/nginx/html, readOnly: true}
+        - {name: vendor, mountPath: /usr/share/nginx/vendor, readOnly: true}
+        - {name: nginx, mountPath: /etc/nginx/conf.d, readOnly: true}
+        # nginx-unprivileged keeps its pid file and temp folders in /tmp,
+        # the only writable path with the read-only root filesystem.
+        - {name: tmp, mountPath: /tmp}
+      volumes:
+      - name: app
+        configMap: {name: fretzpod-app}
+      - name: vendor
+        configMap: {name: fretzpod-vendor}
+      - name: nginx
+        configMap: {name: fretzpod-nginx}
+      - name: tmp
+        emptyDir: {sizeLimit: 16Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fretzpod
+  namespace: fretzpod
+spec:
+  type: NodePort
+  selector: {app: fretzpod}
+  ports:
+  - {name: http, port: 8080, targetPort: 8080, nodePort: 30098}   # any free NodePort
+---
+# A friendly address through Traefik. On my cluster Ingresses live in their own
+# "ingress" namespace, pointing at the app with an ExternalName Service;
+# adjust to however your cluster does it.
+apiVersion: v1
+kind: Service
+metadata:
+  name: fretzpod
+  namespace: ingress
+spec:
+  type: ExternalName
+  externalName: fretzpod.fretzpod.svc.cluster.local
+  ports:
+  - {name: http, port: 8080, protocol: TCP, targetPort: 8080}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: fretzpod
+  namespace: ingress
+spec:
+  ingressClassName: traefik
+  rules:
+  - host: fretzpod.home.example
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: fretzpod
+            port: {number: 8080}
