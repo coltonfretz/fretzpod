@@ -72,6 +72,7 @@ export class Player extends Emitter {
     this.basic = !streamType;
     if (this.basic) log('basic mode: no Media Source support for AAC or MP3 here');
     audio.addEventListener('ended', () => this.finished());
+    audio.addEventListener('timeupdate', () => this.notice());
     audio.addEventListener('play', () => this.emit('state'));
     audio.addEventListener('pause', () => this.emit('state'));
     audio.addEventListener('error', () => {
@@ -377,23 +378,32 @@ export class Player extends Emitter {
     if (gen === this.gen) { s.fetching = false; this.pump(); }
   }
 
-  // Once a second: notices song changes in the stream,
-  // keeps the lock screen current, and keeps the stream fed.
-  tick() {
+  // Notices the stream moving into the next song. Runs on the 1 s tick and on
+  // the audio element's own timeupdate (a few times a second while playing).
+  // WHY both: on a phone the timer alone fell behind with the screen on
+  // (2026-10-28: the title changed 36 s into the next song, while the
+  // audio itself was on time). The log line says when it was noticed late.
+  notice() {
     const s = this.s;
     const t = this.el.currentTime;
     let j = s.cur;
     for (let i = s.cur + 1; i < s.segs.length; i++) {
       if (s.segs[i].start !== undefined && t >= s.segs[i].start) j = i;
     }
-    if (j !== s.cur) {
-      s.cur = j;
-      const seg = s.segs[j];
-      this.index = seg.qi;
-      log(`playing ${seg.qi + 1}/${this.queue.length}${screenOffNote()}`);
-      this.showMetadata();
-      this.emit('song');
-    }
+    if (j === s.cur) return;
+    s.cur = j;
+    const seg = s.segs[j];
+    this.index = seg.qi;
+    const late = t - seg.start;
+    log(`playing ${seg.qi + 1}/${this.queue.length}${late > 2 ? `, noticed ${Math.round(late)} s late` : ''}${screenOffNote()}`);
+    this.showMetadata();
+    this.emit('song');
+  }
+
+  // Once a second: notices song changes (also done on timeupdate), keeps the
+  // lock screen current, and keeps the stream fed.
+  tick() {
+    this.notice();
     this.ticks++;
     if (this.ticks % 300 === 0 && screenOffNote()) log(`still playing${screenOffNote()}`);
     if ('mediaSession' in navigator && this.playing && this.duration() > 0) {
