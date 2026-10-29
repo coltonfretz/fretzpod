@@ -359,7 +359,7 @@ class NowPlaying {
       // Lyrics without timing are a page you scroll with your finger, like
       // the real iPod's. WHY not scroll them along with the song: an even pace
       // is a guess that intros, hooks and breaks throw off, and wrong lyrics
-      // on screen are worse than still ones (Colton, 2026-10-28). The wheel
+      // on screen are worse than still ones. The wheel
       // stays volume either way.
       if (Array.isArray(lyrics) && !synced) lyr.classList.add('plain');
       // The art side and the lyrics side are the two faces of one card.
