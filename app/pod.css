@@ -378,6 +378,9 @@ body.cf-on #pod { display: none; }
 .np.lyrics-on .np-main { display: none; }
 .np.lyrics-on .np-lyrics { display: block; }
 .np-lyrics .lines { transition: transform .45s ease; }
+/* Untimed lyrics: a page scrolled by finger (ui.js render). pan-y lets the
+   browser scroll it while sideways swipes still reach the card's flip. */
+.np-lyrics.plain { overflow-y: auto; touch-action: pan-y; overscroll-behavior: contain; scrollbar-width: thin; }
 .np-lyrics .line { font-size: 5.2cqh; line-height: 1.35; color: #8a8c91; padding: .4cqh 0; text-align: center; }
 .np-lyrics .line.now { color: #000; font-weight: 700; }
 /* Word timing: the current line's words go dark as they're sung. */

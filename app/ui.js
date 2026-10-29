@@ -352,9 +352,16 @@ class NowPlaying {
       const lines = el('div', 'lines');
       lyr.append(lines);
       const lyrics = item.HasLyrics ? this.lyricsFor(item) : null;
+      const synced = Array.isArray(lyrics) && lyrics.some((l) => l.start !== null);
       const words = [];             // per line: its word spans, when it has word timing
       if (Array.isArray(lyrics)) lyrics.forEach((l) => { const [n, w] = lyricLine(l); lines.append(n); words.push(w); });
       else lines.append(el('div', 'line', lyrics === 'loading' ? 'Loading lyrics…' : 'No lyrics for this song'));
+      // Lyrics without timing are a page you scroll with your finger, like
+      // the real iPod's. WHY not scroll them along with the song: an even pace
+      // is a guess that intros, hooks and breaks throw off, and wrong lyrics
+      // on screen are worse than still ones (Colton, 2026-10-28). The wheel
+      // stays volume either way.
+      if (Array.isArray(lyrics) && !synced) lyr.classList.add('plain');
       // The art side and the lyrics side are the two faces of one card.
       const card = el('div', 'np-card');
       card.append(main, lyr);
@@ -366,7 +373,7 @@ class NowPlaying {
       this.parts = {
         root, count, bottom, card, heart, lyr, lines, words,
         lyrics: Array.isArray(lyrics) ? lyrics : null,
-        synced: Array.isArray(lyrics) && lyrics.some((l) => l.start !== null),
+        synced,
       };
       this.songId = item.Id;
       if (!this.fav.has(item.Id)) {
@@ -381,7 +388,7 @@ class NowPlaying {
       + (item.HasLyrics ? '  ·  lyrics' : '');
     if (this.lyricsOn && !item.HasLyrics) this.lyricsOn = false;
     this.parts.root.classList.toggle('lyrics-on', this.lyricsOn);
-    if (this.lyricsOn && this.parts.lyrics) { this.followLyrics(p.position()); this.followLoop(); }
+    if (this.lyricsOn && this.parts.synced) { this.followLyrics(p.position()); this.followLoop(); }
     const dur = p.duration();
     bottom.replaceChildren();
     bottom.className = 'np-bottom ' + this.mode;
@@ -414,16 +421,10 @@ class NowPlaying {
   }
 
   // Highlights the current line of synced lyrics and keeps it in the middle;
-  // on lines with word timing, each word lights up as it's sung.
+  // on lines with word timing, each word lights up as it's sung. Synced
+  // lyrics only: untimed ones are scrolled by hand (render).
   followLyrics(pos) {
     const { lyrics, lines, lyr, words } = this.parts;
-    if (!this.parts.synced) {
-      // No timestamps: scroll through in step with the song, no highlight.
-      const dur = this.player.duration();
-      const travel = Math.max(0, lines.scrollHeight - lyr.clientHeight);
-      lines.style.transform = `translateY(${-(dur ? Math.min(1, pos / dur) : 0) * travel}px)`;
-      return;
-    }
     let cur = 0;
     lyrics.forEach((l, i) => { if (l.start !== null && l.start <= pos + 0.3) cur = i; });
     const spans = words[cur];

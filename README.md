@@ -13,7 +13,7 @@ Inspired by the iPod Classic. Not affiliated with or endorsed by Apple.
 - **Click wheel** that tracks your thumb, with a click sound and a haptic tick on Android. On a computer, the arrow keys and the scroll wheel turn it.
 - **The iPod menus:** Music (Cover Flow, Playlists, Artists, Albums, Songs, Genres, Favorites, Search), Shuffle Songs, Now Playing, Extras, Settings.
 - **Cover Flow:** turn the phone sideways.
-- **Now Playing:** the wheel is volume; press the center to scrub. Hold the center to favorite a song (Jellyfin's own favorites). Swipe sideways to flip the art over to the lyrics, when Jellyfin has them.
+- **Now Playing:** the wheel is volume; press the center to scrub. Hold the center to favorite a song (Jellyfin's own favorites). Swipe sideways to flip the art over to the lyrics, when Jellyfin has them. Timed lyrics follow along; untimed ones scroll with your finger.
 - **Keeps playing with the screen off** on Android, with lock screen controls. See DESIGN.md, "Playback", for how.
 - **Extras:** Vortex (Brick in a circle), Space Sheep (Spacewar! with sheep) and Tiki Golf. Optional shared high score boards.
 - **Optional extras:** TV (free channels from the Tuner Jellyfin plugin), and Speakers (play on Sonos speakers through Home Assistant).

@@ -37,7 +37,7 @@ Why: tested on an Android phone with the screen off, every approach that started
 - Skip, previous and seeking far back restart the stream at the new spot (allowed, since they're user actions).
 - Lock screen and notification controls through the Media Session API.
 - **Basic mode** is the last resort for browsers with no usable Media Source: a plain `<audio>` per song. It works anywhere, but on Android the music may stop between songs with the screen off.
-- Lyrics from Jellyfin when it has them (word timing, line timing, or plain). Nothing fetched from outside.
+- Lyrics from Jellyfin when it has them. Timed lyrics follow the song (word by word or line by line); untimed ones are a page you scroll with your finger, since an even pace through them is a guess. Nothing fetched from outside.
 
 ## Other browsers and computers
 
