@@ -4,7 +4,7 @@
 import { store, newId, log, clearLog } from './util.js';
 import site from './config.js';
 
-export const VERSION = '0.10.3';
+export const VERSION = '0.10.4';
 
 // Which Jellyfin this copy talks to comes from the site settings
 // (config.js, written by build.py from site/site.json): by the address the
@@ -158,7 +158,9 @@ export const artistAlbums = (artistId) =>
   items({ IncludeItemTypes: 'MusicAlbum', AlbumArtistIds: artistId, SortBy: 'ProductionYear,SortName' });
 export const artistSongs = (artistId) =>
   items({ IncludeItemTypes: 'Audio', AlbumArtistIds: artistId, SortBy: 'ProductionYear,Album,ParentIndexNumber,IndexNumber', Limit: 2000 });
-// Genres in this library are tagged on albums, not songs (checked 2026-10-22).
+// An album lists under a genre when its songs carry it: Jellyfin gives each album
+// the genres of its songs (plus whatever its online lookup adds, which genres()
+// below keeps out of the list itself).
 export const genreAlbums = (genreId) =>
   items({ IncludeItemTypes: 'MusicAlbum', GenreIds: genreId, SortBy: 'AlbumArtist,SortName', Limit: 1000 });
 export const playlists = () => items({ IncludeItemTypes: 'Playlist', SortBy: 'SortName' });
@@ -171,8 +173,12 @@ export const albumArtists = (start, limit) => request('/Artists/AlbumArtists?' +
   userId: session.userId, StartIndex: start, Limit: limit, SortBy: 'SortName',
   EnableTotalRecordCount: 'true', EnableImages: 'false', EnableUserData: 'false',
 }));
+// Only genres that songs carry. The song tags hold the library's ~20 broad genres
+// (cleanup 2026-10-29); without IncludeItemTypes, Jellyfin also lists the hundreds
+// of genres its online lookups attach to albums and artists ("acid house", "zolo").
 export const genres = (start, limit) => request('/MusicGenres?' + qs({
-  userId: session.userId, StartIndex: start, Limit: limit, SortBy: 'SortName',
+  userId: session.userId, IncludeItemTypes: 'Audio', Recursive: 'true',
+  StartIndex: start, Limit: limit, SortBy: 'SortName',
   EnableTotalRecordCount: 'true', EnableImages: 'false',
 }));
 

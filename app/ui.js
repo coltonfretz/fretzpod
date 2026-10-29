@@ -1071,11 +1071,16 @@ export class UI {
   }
 
   genres() {
+    // Jellyfin merges genres whatever their capitals and keeps the spelling it met
+    // first, often a lowercase one from its online album lookups ("comedy" for the
+    // songs' "Comedy"). An all-lowercase name gets capitals back for display.
+    const pretty = (name) => (name !== name.toLowerCase() ? name
+      : name.replace(/(^|[\s\-&])([a-z])/g, (m, sep, c) => sep + c.toUpperCase()).replace(/\bR&b\b/g, 'R&B'));
     return new List('Genres', {
       fetch: (start, n) => api.genres(start, n).then((d) => ({
         rows: d.Items.map((g) => ({
-          label: g.Name, arrow: true,
-          select: (ui) => ui.push(new List(g.Name, {
+          label: pretty(g.Name), arrow: true,
+          select: (ui) => ui.push(new List(pretty(g.Name), {
             empty: 'No albums',
             fetch: () => api.genreAlbums(g.Id).then((r) => ({ rows: r.Items.map((a) => this.albumRow(a)), total: r.Items.length })),
           })),
