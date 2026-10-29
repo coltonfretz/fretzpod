@@ -277,13 +277,28 @@ body.cf-on #pod { display: none; }
 .cf-letters span { flex: 1; text-align: center; transition: color .12s, transform .12s; }
 .cf-letters span.empty { opacity: .3; }
 .cf-letters span.on { color: #fff; transform: scale(1.35); }
+/* Each cover is its own GPU layer that only moves: will-change keeps it one,
+   and nothing in it changes while it slides. WHY the reflection is an element
+   and not -webkit-box-reflect: phones redraw a box-reflect every frame the
+   cover moves (15 covers x 60 fps during a flick, which made Cover Flow feel
+   sluggish). As a child of the cover it's drawn once with
+   the cover's layer when the picture loads, then just carried along. */
 .cf-cover {
   position: absolute; width: var(--s); height: var(--s);
   left: calc(var(--s) / -2); top: calc(var(--s) / -2);
   background: #2a2b2f;
-  -webkit-box-reflect: below 2px linear-gradient(transparent 62%, rgba(255,255,255,.26));
+  will-change: transform;
 }
 .cf-cover img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
+/* The mirror image under the cover, 2px below it, brightest at the edge and
+   gone by 38% of the way down (what the box-reflect gradient did). The mask is
+   written for the unflipped picture, so "to top" ends up fading downward. */
+.cf-cover img.cf-reflect {
+  position: absolute; left: 0; top: calc(100% + 2px);
+  transform: scaleY(-1);
+  -webkit-mask-image: linear-gradient(to top, rgba(0,0,0,.26), transparent 38%);
+  mask-image: linear-gradient(to top, rgba(0,0,0,.26), transparent 38%);
+}
 .cf-caption { position: absolute; left: 0; right: 0; bottom: 6vh; text-align: center; color: #fff; pointer-events: none; }
 .cf-title { font-size: 4.8vh; font-weight: 700; padding: 0 8vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cf-artist { font-size: 3.8vh; color: #a9abb0; margin-top: .6vh; }

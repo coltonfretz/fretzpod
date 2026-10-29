@@ -48,12 +48,19 @@ export class CoverFlow {
     this.covers = [];
     for (let k = 0; k < POOL; k++) {
       const c = el('div', 'cf-cover');
-      const img = el('img');
-      img.alt = '';
-      img.draggable = false;
-      img.addEventListener('error', () => img.removeAttribute('src'));
-      c.append(img);
+      // The picture and its reflection (see .cf-reflect in pod.css). Same URL,
+      // so the second one comes from the cache. decoding=async keeps decoding a
+      // new cover off the thread that runs the flick.
+      for (const cls of ['', 'cf-reflect']) {
+        const img = el('img', cls);
+        img.alt = '';
+        img.draggable = false;
+        img.decoding = 'async';
+        img.addEventListener('error', () => img.removeAttribute('src'));
+        c.append(img);
+      }
       c.dataset.index = '-1';
+      c.z = null;           // last z-index set (layout() skips unchanged ones)
       this.stage.append(c);
       this.covers.push(c);
     }
@@ -272,8 +279,10 @@ export class CoverFlow {
       if (c.dataset.index !== String(i) || !c.dataset.loaded) {
         const a = this.albums[i];
         c.dataset.index = String(i);
-        const img = c.firstChild;
-        if (a) { img.src = api.artUrl(a, 300); c.dataset.loaded = '1'; } else { img.removeAttribute('src'); delete c.dataset.loaded; }
+        for (const img of c.children) {
+          if (a) img.src = api.artUrl(a, 300); else img.removeAttribute('src');
+        }
+        if (a) c.dataset.loaded = '1'; else delete c.dataset.loaded;
       }
       const d = i - this.pos;
       const ad = Math.abs(d);
@@ -290,7 +299,9 @@ export class CoverFlow {
         z = 0;
       }
       c.style.transform = `translateX(${x}px) translateZ(${z}px) rotateY(${rot}deg)`;
-      c.style.zIndex = String(1000 - Math.round(ad * 10));
+      // Only when it changes: a new z-index makes the browser re-sort its layers.
+      const zi = 1000 - Math.round(ad * 10);
+      if (c.z !== zi) { c.style.zIndex = String(zi); c.z = zi; }
     }
   }
 
