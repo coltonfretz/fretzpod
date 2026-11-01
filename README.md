@@ -17,6 +17,7 @@ Inspired by the iPod Classic. Not affiliated with or endorsed by Apple.
 - **Keeps playing with the screen off** on Android, with lock screen controls. See DESIGN.md, "Playback", for how.
 - **Extras:** Vortex (Brick in a circle), Space Sheep (Spacewar! with sheep) and Tiki Golf. Optional shared high score boards.
 - **Optional extras:** TV (free channels from the Tuner Jellyfin plugin), and Speakers (play on Sonos speakers through Home Assistant).
+- **In the car:** works over Bluetooth with song info and steering wheel buttons. For Android Auto and CarPlay, Settings > In the car links to Jellify, a free Jellyfin app that has both.
 - **Body colors:** silver, black, blue, red, purple.
 - **Private:** no play reporting to Jellyfin, no access log, no analytics, nothing loaded from outside your server. See DESIGN.md, "Privacy".
 

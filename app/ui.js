@@ -1104,10 +1104,39 @@ export class UI {
     else rows.push({ label: 'Haptics', value: () => (firefox ? 'Not in Firefox' : 'Not supported') });
     rows.push(
       opt('body'),
+      { label: 'In the car', arrow: true, select: (ui) => ui.push(ui.car()) },
       { label: 'About', arrow: true, select: (ui) => ui.push(ui.about()) },
       { label: 'Sign Out', arrow: true, select: (ui) => ui.push(ui.confirmSignOut()) },
     );
     return new List('Settings', { rows });
+  }
+
+  // Android Auto and CarPlay only list apps built for car screens, which a
+  // web page can never be, so this points people to Jellify (a free Jellyfin
+  // app that has both) for those. Over plain Bluetooth Fretzpod already works:
+  // the car shows the song and the steering wheel buttons reach the
+  // Media Session handlers in player.js.
+  car() {
+    const info = (label, value) => ({ label, value: () => value });
+    // window.open, not location: leaving the page would stop the music. The
+    // store links open the phone's own store app.
+    const store = (label, url) => ({ label, arrow: true, select: () => window.open(url, '_blank', 'noopener') });
+    const stores = [
+      store('Jellify for Android', 'https://play.google.com/store/apps/details?id=com.cosmonautical.jellify'),
+      store('Jellify for iPhone', 'https://apps.apple.com/us/app/jellify/id6736884612'),
+    ];
+    if (/iPhone|iPad/.test(navigator.userAgent)) stores.reverse();
+    const rows = [
+      info('Bluetooth', 'Works now'),
+      info('Android Auto', 'Use Jellify'),
+      info('CarPlay', 'Use Jellify'),
+      ...stores,
+    ];
+    // Jellify asks for a server address. Only an https one is worth showing:
+    // a plain http address is a home-only one and won't reach the car.
+    if (api.JF.startsWith('https://')) rows.push(info('Server', new URL(api.JF).host));
+    rows.push(info('Jellify sign-in', 'Same as here'));
+    return new List('In the car', { rows });
   }
 
   about() {
