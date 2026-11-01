@@ -11,6 +11,14 @@
 // but sorts under 21 Savage), and its artist-letter filter is ignored, so
 // letters would jump around. One request (~200 KB compressed) and a local sort
 // by the displayed artist keeps the bar, the caption and the order agreeing.
+//
+// Only real albums fan out: MIN_SONGS or more songs. A library filled from
+// compilations and one-off downloads has hundreds of "albums" holding one or two
+// songs (1,030 of 1,648 in the library this was built for), and flicking through
+// those buries the albums.
+// Those songs are still under Artists, Songs and Genres. Same rule and number as
+// the Jellyfin-Tuned plugin's Music page. A library with no album that big shows
+// everything rather than nothing.
 import * as api from './api.js';
 import { el, fmt, log } from './util.js';
 
@@ -19,6 +27,7 @@ const FRICTION = 0.95;      // momentum decay per frame
 const SNAP = 0.18;          // how hard it settles onto the nearest cover
 const TAP_SLOP = 16;        // px a finger may wobble and still count as a tap
 const LETTERS = ['#', ...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'];
+const MIN_SONGS = 4;
 
 export class CoverFlow {
   // hooks.play(items, i): start songs; hooks.tick(): click + buzz per cover
@@ -108,7 +117,8 @@ export class CoverFlow {
     this.captionTitle.textContent = 'Loading albums…';
     api.allAlbums().then((d) => {
       const coll = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
-      const list = d.Items.map((a) => {
+      const real = d.Items.filter((a) => (a.ChildCount || 0) >= MIN_SONGS);
+      const list = (real.length ? real : d.Items).map((a) => {
         const k = (a.AlbumArtist || '').trim().replace(/^the\s+/i, '');
         const c = k.charAt(0).toUpperCase();
         return { a, k, l: /[A-Z]/.test(c) ? c : '#' };

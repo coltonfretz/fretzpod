@@ -4,7 +4,7 @@
 import { store, newId, log, clearLog } from './util.js';
 import site from './config.js';
 
-export const VERSION = '0.10.6';
+export const VERSION = '0.10.7';
 
 // Which Jellyfin this copy talks to comes from the site settings
 // (config.js, written by build.py from site/site.json): by the address the
@@ -149,7 +149,8 @@ function items(params, opts) {
 export const albums = (start, limit) =>
   items({ IncludeItemTypes: 'MusicAlbum', SortBy: 'SortName', StartIndex: start, Limit: limit });
 // Every album in one go, for Cover Flow (which sorts them itself; see there).
-export const allAlbums = () => items({ IncludeItemTypes: 'MusicAlbum', EnableImages: 'false' });
+// ChildCount (songs per album) lets Cover Flow leave out one-song "albums".
+export const allAlbums = () => items({ IncludeItemTypes: 'MusicAlbum', EnableImages: 'false', Fields: 'ChildCount' });
 export const songs = (start, limit) =>
   items({ IncludeItemTypes: 'Audio', SortBy: 'SortName', StartIndex: start, Limit: limit });
 export const albumSongs = (albumId) =>
