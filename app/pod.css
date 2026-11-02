@@ -451,3 +451,122 @@ canvas.game { flex: 1; width: 100%; height: 100%; display: block; }
 .tv-info-when { flex: none; min-width: 14cqw; opacity: .7; }
 .tv-info-title { overflow: hidden; text-overflow: ellipsis; }
 .tv-full { position: fixed; inset: 0; z-index: 100; background: #000; }
+
+/* ---------- Car mode (carmode.js) ----------
+   The iPod's face at dashboard scale: the body color behind, the screen with
+   its gradient title bar and blue highlight, and the wheel cut into four big
+   buttons plus the center. Sized from the window (container units), so the
+   same layout fills half a split screen or a whole phone. A window clearly
+   wider than tall (a phone on its side, full screen) puts the wheel beside
+   the screen instead of under it. */
+#car {
+  position: fixed; inset: 0; z-index: 5;
+  container: car / size;
+  background: linear-gradient(var(--body-top), var(--body-bot));
+  touch-action: none;
+}
+#car[hidden] { display: none; }
+.car-in {
+  width: 100%; height: 100%;
+  display: flex; flex-direction: column; align-items: center;
+  gap: 3cqmin;
+  padding: max(3cqmin, env(safe-area-inset-top)) 3cqmin max(3cqmin, env(safe-area-inset-bottom));
+}
+.car-screen {
+  flex: 1; min-height: 0; width: 100%;
+  container-type: size;
+  display: flex; flex-direction: column;
+  background: #fff; color: #000;
+  border: 2.2cqmin solid #0b0b0c; border-radius: 2cqmin;
+  overflow: hidden;
+}
+.car-wheel { flex: none; width: min(94cqw, 54cqh); aspect-ratio: 1; }
+@container car (min-aspect-ratio: 5 / 4) {
+  .car-in { flex-direction: row; }
+  .car-screen { height: 100%; }
+  .car-wheel { width: min(44cqw, 94cqh); }
+}
+.car-wheel svg { width: 100%; height: 100%; display: block; }
+.car-wheel .seg path:first-child, .car-wheel circle {
+  fill: var(--wheel); stroke: var(--wheel-edge); stroke-width: 1.2;
+  cursor: pointer;
+}
+.car-wheel .seg-center { fill: var(--center); }
+.car-wheel .pressed path:first-child, .car-wheel circle.pressed { fill: var(--wheel-edge); }
+/* The iPod's own labels are a faint grey; at a glance in daylight they need
+   more contrast. Darker on the light bodies, lighter on the dark ones. */
+#car { --car-label: #5f6268; }
+:root[data-body="black"] #car { --car-label: #e4e4e8; }
+:root[data-body="purple"] #car { --car-label: #efe6ff; }
+.car-wheel text { fill: var(--car-label); font: 700 15px "Helvetica Neue", Helvetica, Arial, sans-serif; text-anchor: middle; pointer-events: none; }
+.car-wheel .icon { fill: var(--car-label); pointer-events: none; }
+
+.car-bar {
+  flex: none; height: 15cqh;
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+  padding: 0 3cqw;
+  background: linear-gradient(#fdfdfd, #cfd2d7);
+  border-bottom: 1px solid #9ea1a6;
+  font-size: min(8cqh, 6cqw); font-weight: 700; color: #1b1b1b;
+}
+.car-bar-title { text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 56cqw; }
+.car-bar-state { justify-self: start; color: #2f6fc9; }
+.car-bar-count { justify-self: end; font-size: min(6.5cqh, 5cqw); color: #3a3b3e; }
+.car-view { flex: 1; min-height: 0; position: relative; display: flex; flex-direction: column; }
+
+.car-np { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: center; padding: 3cqh 4cqw; gap: 3cqh; }
+.car-np-top { flex: 1; min-height: 0; overflow: hidden; display: flex; align-items: center; gap: 4cqw; }
+.car-art { position: relative; height: 100%; max-height: 60cqh; aspect-ratio: 1; flex: none; box-shadow: 0 .6cqh 2cqh rgba(0,0,0,.35); }
+.car-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.car-art img.missing { visibility: hidden; }
+.car-heart {
+  display: none; position: absolute; right: 4%; bottom: 4%;
+  width: 26%; aspect-ratio: 1; border-radius: 50%;
+  align-items: center; justify-content: center;
+  background: rgba(255,255,255,.94); box-shadow: 0 .3cqh 1cqh rgba(0,0,0,.4);
+  font-size: min(10cqh, 7cqw); line-height: 1; color: #ff3b5c;
+}
+.car-heart.on { display: flex; }
+.car-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1.5cqh; }
+.car-title {
+  font-size: min(12cqh, 8cqw); font-weight: 700; line-height: 1.1;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.car-artist, .car-album { font-size: min(9cqh, 6cqw); color: #2c2d30; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.car-album { color: #5a5c61; }
+/* A screen taller than wide (a whole phone held upright): art above the
+   words instead of beside them, or the title gets squeezed to a few letters. */
+@container (max-aspect-ratio: 1 / 1) {
+  .car-np-top { flex-direction: column; justify-content: center; gap: 2.5cqh; }
+  .car-art { height: 36cqh; }
+  .car-text { flex: none; width: 100%; align-items: center; text-align: center; }
+  .car-title { font-size: min(9cqh, 9cqw); }
+  .car-artist, .car-album { font-size: min(6.5cqh, 6.5cqw); max-width: 100%; }
+}
+.car-np .meter { height: 4.5cqh; flex: none; }
+.car-times { display: flex; justify-content: space-between; font-size: min(8cqh, 5.5cqw); font-weight: 700; margin-top: -1.5cqh; }
+
+.car-list { flex: 1; min-height: 0; position: relative; display: flex; flex-direction: column; }
+.car-row {
+  flex: 1; min-height: 0;
+  display: flex; align-items: center; gap: 3cqw;
+  padding: 0 7cqw 0 4cqw;
+  font-size: min(11cqh, 7.5cqw); font-weight: 700;
+  border-bottom: 1px solid #e3e4e7;
+  cursor: pointer;
+}
+.car-row.sel { background: var(--sel); color: #fff; border-bottom-color: transparent; }
+.car-row-label { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.car-row-arrow { flex: none; font-size: 1.2em; }
+.car-scroll { position: absolute; top: 0; right: 0; bottom: 0; width: 3cqw; background: #e9eaec; border-left: 1px solid #c9ccd0; }
+.car-scroll-thumb { position: absolute; left: 0; right: 0; background: linear-gradient(90deg, #8c9096, #5f6368); }
+.car-note, .car-idle { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3cqh; text-align: center; }
+.car-note { font-size: min(9cqh, 6cqw); color: #45474b; }
+.car-idle-title { font-size: min(12cqh, 8cqw); font-weight: 700; }
+.car-idle-hint { font-size: min(9cqh, 6cqw); color: #45474b; }
+.car-pop {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 2cqh; pointer-events: none; background: rgba(255,255,255,.55);
+}
+.car-pop-heart { font-size: 45cqh; line-height: 1; color: #ff3b5c; }
+.car-pop-text { font-size: min(8cqh, 6cqw); font-weight: 700; background: rgba(255,255,255,.95); padding: 1cqh 3cqw; border-radius: 1.5cqh; }

@@ -6,6 +6,7 @@ import { Player, streamType } from './player.js';
 import { Wheel } from './wheel.js';
 import { UI } from './ui.js';
 import { CoverFlow } from './coverflow.js';
+import { CarMode } from './carmode.js';
 import { Output } from './speakers.js';
 import { log } from './util.js';
 
@@ -24,11 +25,14 @@ const phone = new Player($('#audio'), {
 const player = new Output(phone, { repeat: () => settings.get('repeat') });
 
 let ui = null;
+let car = null;
+// Keys (and the iPod wheel, though car mode covers it) go to car mode while it shows.
+const target = () => (car && !car.root.hidden ? car : ui);
 const wheel = new Wheel($('#wheel'), $('#center'), {
-  turn: (dir) => ui.turn(dir),
-  press: (b) => ui.press(b),
-  hold: (b) => ui.hold(b),
-  holdEnd: (b) => ui.holdEnd(b),
+  turn: (dir) => target().turn(dir),
+  press: (b) => target().press(b),
+  hold: (b) => target().hold(b),
+  holdEnd: (b) => target().holdEnd(b),
 }, {
   clicker: () => settings.get('clicker') === 'on',
   haptics: () => settings.get('haptics'),
@@ -74,7 +78,23 @@ const cf = new CoverFlow($('#coverflow'), {
   play: (items, i) => ui.playSongs(items, i),
   tick: () => wheel.feedback(),
 });
+// Car mode (Settings > In the car) wins over everything: half of a split screen
+// is often wider than tall, which would otherwise read as "sideways" and open
+// Cover Flow next to Maps.
+car = new CarMode($('#car'), {
+  player,
+  feedback: (press) => wheel.feedback(press),
+  onChange: () => applyOrientation(),
+});
+window.addEventListener('fp-car', (e) => car.set(e.detail));
 function applyOrientation() {
+  if (car.on && api.getSession()) {
+    document.body.classList.remove('cf-on');
+    cf.hide();
+    car.show();
+    return;
+  }
+  car.hide();
   const on = (sideways.matches || forceCoverFlow) && !!api.getSession();
   // Watching TV, sideways means a full-screen picture instead of Cover Flow.
   const tv = ui.top?.setFull ? ui.top : null;

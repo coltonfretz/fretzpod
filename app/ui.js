@@ -6,7 +6,7 @@
 // as the selection gets near them.
 import * as api from './api.js';
 import { settings } from './settings.js';
-import { el, fmt, log, logLines } from './util.js';
+import { el, fmt, log, logLines, prettyGenre } from './util.js';
 import { Vortex } from './vortex.js';
 import { SpaceSheep } from './spacesheep.js';
 import * as scores from './scores.js';
@@ -780,7 +780,8 @@ export class UI {
     let pool = [];
     let n = 0;
     const show = () => {
-      if (!pool.length || !pane.isConnected || document.hidden) return;
+      // Hidden under car mode too: no art downloads on a drive's mobile data.
+      if (!pool.length || !pane.isConnected || document.hidden || document.body.classList.contains('car-on')) return;
       const img = imgs[n % 2];
       const other = imgs[(n + 1) % 2];
       img.onload = () => {
@@ -1071,11 +1072,7 @@ export class UI {
   }
 
   genres() {
-    // Jellyfin merges genres whatever their capitals and keeps the spelling it met
-    // first, often a lowercase one from its online album lookups ("comedy" for the
-    // songs' "Comedy"). An all-lowercase name gets capitals back for display.
-    const pretty = (name) => (name !== name.toLowerCase() ? name
-      : name.replace(/(^|[\s\-&])([a-z])/g, (m, sep, c) => sep + c.toUpperCase()).replace(/\bR&b\b/g, 'R&B'));
+    const pretty = prettyGenre;   // capitals back on lowercase genre names (util.js)
     return new List('Genres', {
       fetch: (start, n) => api.genres(start, n).then((d) => ({
         rows: d.Items.map((g) => ({
@@ -1127,6 +1124,8 @@ export class UI {
     ];
     if (/iPhone|iPad/.test(navigator.userAgent)) stores.reverse();
     const rows = [
+      // Big buttons and Now Playing for a phone on the dashboard (carmode.js).
+      { label: 'Car Mode', arrow: true, select: () => window.dispatchEvent(new CustomEvent('fp-car', { detail: true })) },
       info('Bluetooth', 'Works now'),
       info('Android Auto', 'Use Jellify'),
       info('CarPlay', 'Use Jellify'),

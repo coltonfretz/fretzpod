@@ -4,7 +4,7 @@
 import { store, newId, log, clearLog } from './util.js';
 import site from './config.js';
 
-export const VERSION = '0.10.7';
+export const VERSION = '0.11.0';
 
 // Which Jellyfin this copy talks to comes from the site settings
 // (config.js, written by build.py from site/site.json): by the address the
@@ -167,6 +167,8 @@ export const genreAlbums = (genreId) =>
 export const playlists = () => items({ IncludeItemTypes: 'Playlist', SortBy: 'SortName' });
 export const playlistSongs = (id) => request(`/Playlists/${id}/Items?` + qs({ userId: session.userId, Limit: 3000 }));
 export const randomSongs = (n) => items({ IncludeItemTypes: 'Audio', SortBy: 'Random', Limit: n });
+export const randomGenreSongs = (genreId, n) =>
+  items({ IncludeItemTypes: 'Audio', GenreIds: genreId, SortBy: 'Random', Limit: n });
 export const randomAlbumsWithArt = (n) =>
   items({ IncludeItemTypes: 'MusicAlbum', SortBy: 'Random', Limit: n, ImageTypes: 'Primary' });
 
