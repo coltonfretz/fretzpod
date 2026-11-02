@@ -17,9 +17,9 @@ Inspired by the iPod Classic. Not affiliated with or endorsed by Apple.
 - **Keeps playing with the screen off** on Android, with lock screen controls. See DESIGN.md, "Playback", for how.
 - **Extras:** Vortex (Brick in a circle), Space Sheep (Spacewar! with sheep) and Tiki Golf. Optional shared high score boards.
 - **Optional extras:** TV (free channels from the Tuner Jellyfin plugin), and Speakers (play on Sonos speakers through Home Assistant).
-- **In the car:** works over Bluetooth with song info and steering wheel buttons. **Car Mode** (Settings > In the car) turns the screen into big buttons for a phone on the dashboard: the iPod wheel cut into four buttons where its labels sit, Now Playing in large type, and a short menu (Shuffle Songs, Favorites, Playlists, Shuffle a Genre). On Android, put it in split screen next to Maps (the map in the picture is a drawing). For Android Auto and CarPlay themselves, Settings > In the car links to Jellify, a free Jellyfin app that has both.
+- **In the car:** works over Bluetooth with song info and steering wheel buttons. **Car Mode** (Settings > In the car) turns the screen into big buttons for a phone on the dashboard: the iPod wheel cut into four buttons where its labels sit, Now Playing in large type, and a short menu (Shuffle Songs, Favorites, Playlists, Shuffle a Genre). On Android, put it in split screen next to Maps. For Android Auto and CarPlay themselves, Settings > In the car links to Jellify, a free Jellyfin app that has both.
 
-  <img src="screenshots/car-mode.webp" alt="Car Mode in Android split screen: a map on top, Fretzpod's big Now Playing and four-button wheel below" width="260">
+  <img src="screenshots/car-mode.webp" alt="Car Mode in Android split screen: Google Maps on top, Fretzpod's big Now Playing and four-button wheel below, purple body" width="260">
 
 - **Body colors:** silver, black, blue, red, purple.
 - **Private:** no play reporting to Jellyfin, no access log, no analytics, nothing loaded from outside your server. See DESIGN.md, "Privacy".
