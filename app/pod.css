@@ -534,11 +534,14 @@ canvas.game { flex: 1; width: 100%; height: 100%; display: block; }
 }
 .car-artist, .car-album { font-size: min(9cqh, 6cqw); color: #2c2d30; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .car-album { color: #5a5c61; }
-/* A screen taller than wide (a whole phone held upright): art above the
-   words instead of beside them, or the title gets squeezed to a few letters. */
-@container (max-aspect-ratio: 1 / 1) {
+/* A screen that isn't clearly wide (a whole phone held upright, or the screen
+   half of a phone on its side): art above the words instead of beside them,
+   or a long title gets cut to a few letters. The art is the part that gives
+   way when a title takes two lines, so the album line never drops off the
+   bottom: words matter more than the picture at arm's length. */
+@container (max-aspect-ratio: 3 / 2) {
   .car-np-top { flex-direction: column; justify-content: center; gap: 2.5cqh; }
-  .car-art { height: 36cqh; }
+  .car-art { height: auto; flex: 0 1 36cqh; min-height: 12cqh; }
   .car-text { flex: none; width: 100%; align-items: center; text-align: center; }
   .car-title { font-size: min(9cqh, 9cqw); }
   .car-artist, .car-album { font-size: min(6.5cqh, 6.5cqw); max-width: 100%; }
