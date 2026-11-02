@@ -1109,33 +1109,32 @@ export class UI {
   }
 
   // Android Auto and CarPlay only list apps built for car screens, which a
-  // web page can never be, so this points people to Jellify (a free Jellyfin
-  // app that has both) for those. Over plain Bluetooth Fretzpod already works:
-  // the car shows the song and the steering wheel buttons reach the
-  // Media Session handlers in player.js.
+  // web page can never be, so those two rows open the store page for Jellify
+  // (a free Jellyfin app that has both); it signs in with the same server and
+  // account as Fretzpod. Plain Bluetooth needs no row: the car shows the song
+  // and the steering wheel buttons reach the Media Session handlers in
+  // player.js on their own, and a web page can't open the phone's Bluetooth
+  // settings to help with pairing (Chrome only launches apps that ask to be
+  // opened from the web, which Settings doesn't).
   car() {
-    const info = (label, value) => ({ label, value: () => value });
     // window.open, not location: leaving the page would stop the music. The
     // store links open the phone's own store app.
-    const store = (label, url) => ({ label, arrow: true, select: () => window.open(url, '_blank', 'noopener') });
+    const store = (label, url) => ({
+      label, value: () => 'Jellify', arrow: true,
+      select: () => window.open(url, '_blank', 'noopener'),
+    });
     const stores = [
-      store('Jellify for Android', 'https://play.google.com/store/apps/details?id=com.cosmonautical.jellify'),
-      store('Jellify for iPhone', 'https://apps.apple.com/us/app/jellify/id6736884612'),
+      store('Android Auto', 'https://play.google.com/store/apps/details?id=com.cosmonautical.jellify'),
+      store('CarPlay', 'https://apps.apple.com/us/app/jellify/id6736884612'),
     ];
     if (/iPhone|iPad/.test(navigator.userAgent)) stores.reverse();
-    const rows = [
-      // Big buttons and Now Playing for a phone on the dashboard (carmode.js).
-      { label: 'Car Mode', arrow: true, select: () => window.dispatchEvent(new CustomEvent('fp-car', { detail: true })) },
-      info('Bluetooth', 'Works now'),
-      info('Android Auto', 'Use Jellify'),
-      info('CarPlay', 'Use Jellify'),
-      ...stores,
-    ];
-    // Jellify asks for a server address. Only an https one is worth showing:
-    // a plain http address is a home-only one and won't reach the car.
-    if (api.JF.startsWith('https://')) rows.push(info('Server', new URL(api.JF).host));
-    rows.push(info('Jellify sign-in', 'Same as here'));
-    return new List('In the car', { rows });
+    return new List('In the car', {
+      rows: [
+        // Big buttons and Now Playing for a phone on the dashboard (carmode.js).
+        { label: 'Enter Car Mode', arrow: true, select: () => window.dispatchEvent(new CustomEvent('fp-car', { detail: true })) },
+        ...stores,
+      ],
+    });
   }
 
   about() {
