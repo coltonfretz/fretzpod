@@ -29,6 +29,8 @@ const LOW = 5;
 const SAVE_KEY = 'fp.speakers';
 const LINK_LIFE_MS = 11 * 3600e3;   // song links last 12 h (speakers.py); reload before then
 const GRACE_MS = 15000;             // after a load, the speaker may still show its old track
+const MEMBERS_EVERY = 3;            // polls between checks of who else is in the group (~6 s)
+const REGROUP_MS = 8000;            // after a join or leave here, Sonos needs a moment to catch up
 
 const call = (path, body) => api.podCall('speakers', path, body);
 
@@ -60,6 +62,9 @@ class SpeakerPlayer extends Emitter {
     this.basic = false;
     this.loadedAt = 0;
     this.notOurs = 0;             // polls in a row where the speaker played something else
+    this.polls = 0;
+    this.regroupedAt = 0;         // last join/leave done from here, or handoff followed
+    this.all = null;              // every speaker this account may use, asked once
   }
 
   // ---------- surviving a reopened app ----------
@@ -208,28 +213,79 @@ class SpeakerPlayer extends Emitter {
   // sync, with no restart.
   join(sp) {
     this.members.push(sp);
+    this.regroupedAt = Date.now();
     this.save();
     this.emit('song');
     call('join', { speaker: this.speaker.id, member: sp.id }).catch((e) => log(`speaker join: ${e.message}`));
   }
 
-  // A speaker drops out; the rest keep playing. If it's the lead (whose queue
-  // is playing), the music is handed to the other speaker at the same spot
-  // first, then the old lead is paused.
+  // A speaker drops out; the rest keep playing. Even the lead (whose queue is
+  // playing) just leaves: Sonos hands the queue and the spot to a speaker that
+  // stays, mid-song, with no restart, and we follow it.
   leave(sp) {
     if (this.members.length < 2) return;
     this.members = this.members.filter((m) => m.id !== sp.id);
-    if (sp.id !== this.speaker.id) {
-      this.save();
-      this.emit('song');
-      call('unjoin', { speaker: sp.id }).catch((e) => log(`speaker unjoin: ${e.message}`));
-      return;
+    if (sp.id === this.speaker.id) this.speaker = this.members[0];
+    this.regroupedAt = Date.now();
+    this.save();
+    this.emit('song');
+    call('unjoin', { speaker: sp.id }).catch((e) => log(`speaker unjoin: ${e.message}`));
+  }
+
+  // ---------- speakers grouped from elsewhere ----------
+  //
+  // Home Assistant's speaker tiles, and the Sonos app, can add or drop a
+  // speaker too. Dropping the lead hands the music to the other speaker, so
+  // the lead we watch goes quiet (or starts following another speaker) while
+  // our songs play on elsewhere. These keep up with that.
+
+  async others() {
+    if (!this.all) {
+      try { this.all = await call('list'); } catch { return []; }
     }
-    const old = this.speaker;
-    this.speaker = this.members[0];
-    this.solo = true;
-    const p = this.playing ? this.load(this.index, this.position()) : null;
-    Promise.resolve(p).then(() => call('command', { speaker: old.id, cmd: 'pause' })).catch(() => {});
+    return this.all.filter((sp) => sp.id !== this.speaker.id).map((sp) => ({ id: sp.id, name: sp.name }));
+  }
+
+  // Another speaker now plays our queue on its own (Sonos moved the music to
+  // it): make it the lead. Returns whether it did.
+  async followMusic() {
+    for (const sp of await this.others()) {
+      let o;
+      try { o = await call('state?speaker=' + encodeURIComponent(sp.id)); } catch { continue; }
+      const ours = o.songId && this.queue.some((x, i) => i >= this.base && x.Id === o.songId);
+      if (o.state === 'playing' && !o.follows && ours) {
+        log(`the music moved to ${sp.name}`);
+        this.speaker = sp;
+        this.members = [sp];
+        this.regroupedAt = Date.now();
+        this.notOurs = 0;
+        this.save();
+        this.emit('song');
+        this.checkMembers();
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // Which speakers play along with the lead right now, for the name shown
+  // ("Living Room + Sunroom").
+  async checkMembers() {
+    if (Date.now() - this.regroupedAt < REGROUP_MS) return;
+    const lead = this.speaker;
+    const now = [lead];
+    for (const sp of await this.others()) {
+      try {
+        const o = await call('state?speaker=' + encodeURIComponent(sp.id));
+        if (o.follows === lead.id) now.push(sp);
+      } catch { return; }   // can't tell; leave it as it is
+    }
+    if (this.speaker !== lead) return;   // moved on while we asked
+    const ids = (list) => list.map((m) => m.id).join();
+    if (ids(now) === ids(this.members)) return;
+    this.members = now;
+    this.save();
+    this.emit('song');
   }
 
   // ---------- following the speaker ----------
@@ -241,8 +297,16 @@ class SpeakerPlayer extends Emitter {
 
   async poll() {
     let s;
-    try { s = await call('state?speaker=' + encodeURIComponent(this.speaker.id)); } catch { return; }
-    if (!this.playing) return;
+    const lead = this.speaker;
+    try { s = await call('state?speaker=' + encodeURIComponent(lead.id)); } catch { return; }
+    if (!this.playing || this.speaker !== lead) return;
+    // The lead went quiet while we thought it played (or on the first look
+    // after reopening), or it now follows another speaker: the music may have
+    // moved to the other speaker. Not within a moment of our own join/leave,
+    // while Sonos is still regrouping.
+    const quiet = s.state !== 'playing' && (this.st.state === 'playing' || this.polls === 0);
+    if ((s.follows || quiet) && Date.now() - this.regroupedAt > REGROUP_MS / 2 && await this.followMusic()) return;
+    if (++this.polls % MEMBERS_EVERY === 0) this.checkMembers();
     if (this.vol === null && s.volume !== null) this.vol = s.volume;
     const was = this.st.state;
     this.st = {
@@ -265,7 +329,8 @@ class SpeakerPlayer extends Emitter {
           this.emit('song');
         }
       }
-    } else if (Date.now() - this.loadedAt > GRACE_MS && ++this.notOurs >= 2) {
+    } else if (Date.now() - this.loadedAt > GRACE_MS && Date.now() - this.regroupedAt > REGROUP_MS
+               && ++this.notOurs >= 2) {
       // Twice in a row on something that isn't ours (the PC stream, the Sonos
       // app, grouped under another speaker): the speakers moved on. Let go
       // without pausing whatever they're playing now.

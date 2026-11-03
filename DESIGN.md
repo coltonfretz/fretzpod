@@ -93,6 +93,7 @@ Sonos --PUBLIC_BASE/speakers/audio/<signed link>--> nginx --> fretzpod-speakers 
 - **Signed song links, not keys.** A Sonos downloads songs itself, and Home Assistant's history stores every address a speaker played. So the speakers only ever get links like `/speakers/audio/<song>.<mode>.<expiry>.<signature>.flac`: one song, 12 hours, useless for anything else.
 - Original files where Sonos can play them (MP3, AAC, FLAC up to 48 kHz), with byte ranges so the speaker can seek. Anything else is converted to 320k MP3.
 - Speaker state is read from the speaker itself over UPnP, because Home Assistant's copy can run about 30 s stale when the speakers can't push events back to it. Commands still go through Home Assistant.
+- **Grouping from elsewhere.** Home Assistant (or the Sonos app) can add or drop a speaker too. The helper reports which speaker each one follows, so the app keeps its "Living Room + Sunroom" name right. When the lead speaker leaves a group, Sonos hands its queue and spot to a speaker that stays, mid-song; the app notices the lead went quiet while another speaker plays its songs, and follows the music there. Dropping the lead from the Speakers menu works the same way, so neither path restarts the song.
 - On my setup the speakers sit on a separate network that must never reach into the server's, so `PUBLIC_BASE` is Fretzpod's public https address and songs come in from outside like any visitor.
 
 ## High scores

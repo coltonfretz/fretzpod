@@ -274,13 +274,47 @@ def _secs(hms):
         return 0
 
 
+_uuids = {}
+
+
+def _uuid(host):
+    """The speaker's Sonos id (RINCON_...), which group links point at. Fixed
+    for the life of the speaker, so asked once."""
+    if host not in _uuids:
+        with urllib.request.urlopen(f"http://{host}:1400/xml/device_description.xml", timeout=4) as r:
+            m = re.search(r"<UDN>uuid:(RINCON_[0-9A-Za-z]+)</UDN>", r.read().decode())
+        _uuids[host] = m.group(1) if m else None
+    return _uuids[host]
+
+
+def _follows(host):
+    """The speaker this one plays along with in a Sonos group, or None if it
+    plays its own queue (alone, or as the group's lead). A follower's source
+    is x-rincon:<lead's id>."""
+    uri = _tag(_soap(host, "AVTransport", "GetMediaInfo"), "CurrentURI") or ""
+    if not uri.startswith("x-rincon:"):
+        return None
+    lead = uri.split(":", 1)[1]
+    for sp, h in SPEAKER_HOSTS.items():
+        try:
+            if _uuid(h) == lead:
+                return sp
+        except Exception:
+            continue
+    return None
+
+
 def state(speaker):
     host = SPEAKER_HOSTS[speaker]
     pos = _soap(host, "AVTransport", "GetPositionInfo")
     transport = _tag(_soap(host, "AVTransport", "GetTransportInfo"), "CurrentTransportState")
     # Group volume: for one speaker it's just its volume; for a group it's the
-    # Sonos app's group slider (members keep their balance).
-    volume = _tag(_soap(host, "GroupRenderingControl", "GetGroupVolume"), "CurrentVolume")
+    # Sonos app's group slider (members keep their balance). A follower may
+    # refuse it (the group's volume lives on the lead); that's not an error here.
+    try:
+        volume = _tag(_soap(host, "GroupRenderingControl", "GetGroupVolume"), "CurrentVolume")
+    except Exception:
+        volume = None
     track = _tag(pos, "Track")
     # Which song, if it's one of ours: our links carry the song id. Anything
     # else (the PC stream, the Sonos app, nothing) gives None, which tells a
@@ -294,6 +328,10 @@ def state(speaker):
         "queuePosition": int(track) if track and track.isdigit() else None,   # counts from 1
         "position": _secs(_tag(pos, "RelTime")),
         "positionAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        # Grouped under another speaker (joined from the Sonos app, Home
+        # Assistant or Fretzpod), so the app can show who's playing and follow
+        # the music if it moves. A follower reports no song of its own.
+        "follows": _follows(host),
     }
 
 
