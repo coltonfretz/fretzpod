@@ -11,7 +11,7 @@
 // jetpack: a tap is a short push, holding keeps it lit. The wheel only follows
 // one thumb on the ring, so you can't steer and burn at the same moment;
 // aim, then burn. Previous jumps through hyperspace to a random spot (a
-// panic button, with a cooldown). Play/pause pauses, MENU leaves.
+// panic button, with a cooldown). Play/pause does nothing, MENU leaves.
 //
 // Game units: the sun at (0, 0), the screen spans x -WX..WX and y -WY..WY;
 // angles in radians, 0 pointing right, growing clockwise (screen y is down).
@@ -145,11 +145,10 @@ export class SpaceSheep {
     if (this.live()) this.fire(this.player, 'you');
   }
 
-  play() {
-    if (this.state === 'play') this.state = 'paused';
-    else if (this.state === 'paused') this.state = 'play';
-    return true;
-  }
+  // Play/pause does nothing here (Colton, 2026-11-08): the thumb crosses it
+  // all the time while aiming, and stray presses kept pausing the game. It
+  // still claims the button, or a stray press would pause the music instead.
+  play() { return true; }
 
   next() {
     if (this.live()) this.player.burn = Math.max(this.player.burn, this.t + TAP_BURN);
