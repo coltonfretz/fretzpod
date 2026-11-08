@@ -10,13 +10,15 @@ const GAMES = Number(process.argv[2] || 20);
 const MISS = Number(process.env.MISS ?? 0.25);
 const REACT = 0.1;   // seconds
 const FL = [{ x: 0.295, y: 1.58 }, { x: 0.625, y: 1.58 }];
-const out = { games: 0, scores: [], seconds: [], missions: [], escapes: 0, nudges: 0, holes: 0, multiballs: 0, saves: 0, maxBalls: 0, topHits: 0, flips: 0 };
+const out = { games: 0, scores: [], seconds: [], missions: [], escapes: 0, nudges: 0, holes: 0, ramps: 0, rollbacks: 0, multiballs: 0, saves: 0, maxBalls: 0, topHits: 0, flips: 0 };
 for (let n = 0; n < GAMES; n++) {
   const p = new StarPinball(() => {});
   let t = 0, pullFor = 0;
   const cool = [{ hold: 0, wait: 0, react: undefined }, { hold: 0, wait: 0, react: undefined }];
   const say = p.say.bind(p);
   p.say = (text, s) => { if (text === 'Multiball!') out.multiballs++; if (text === 'Ball saved') out.saves++; say(text, s); };
+  const rd = p.rampDone.bind(p);
+  p.rampDone = () => { out.ramps++; rd(); };
   const adv = p.advance.bind(p);
   p.advance = (id, k) => { if (id === 'hole') out.holes++; adv(id, k); };
   while (p.state !== 'over' && t < 900) {
@@ -54,4 +56,4 @@ for (let n = 0; n < GAMES; n++) {
 const avg = (a) => Math.round(a.reduce((s, x) => s + x, 0) / a.length);
 console.log({ games: out.games, avgScore: avg(out.scores), maxScore: Math.max(...out.scores), avgSeconds: avg(out.seconds),
   avgMissions: (out.missions.reduce((s, x) => s + x, 0) / out.games).toFixed(1), maxMissions: Math.max(...out.missions),
-  escapes: out.escapes, nudges: out.nudges, holes: out.holes, multiballs: out.multiballs, saves: out.saves, maxBalls: out.maxBalls });
+  escapes: out.escapes, nudges: out.nudges, holes: out.holes, ramps: out.ramps, multiballs: out.multiballs, saves: out.saves, maxBalls: out.maxBalls });

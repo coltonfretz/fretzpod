@@ -18,7 +18,8 @@ folder; nothing here is served to phones.
   in the walls) and `nudges` (a ball stuck long enough for the ball search),
   both should be 0. On 2026-11-08: MISS=0.25 games last about a minute and
   finish ~2 missions, MISS=0.1 about two minutes and ~4 missions, with
-  multiballs. Rerun after moving anything on the table in `pinball.js`.
+  multiballs. With the ramp (0.14.0) the autopilot, which never aims, rides
+  it about once a game. Rerun after moving anything on the table in `pinball.js`.
 - `node sheep.mjs`: Space Sheep, 6 games doing nothing and 6 with a bot that
   plays like a quick human (wheel ticks capped, shots capped). On 2026-10-25:
   idle dies first at 10-20 s, the bot reaches wave 6-11 in 1 to 1.5 minutes,
