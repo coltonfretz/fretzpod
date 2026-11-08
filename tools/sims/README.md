@@ -19,7 +19,9 @@ folder; nothing here is served to phones.
   both should be 0. On 2026-11-08: MISS=0.25 games last about a minute and
   finish ~2 missions, MISS=0.1 about two minutes and ~4 missions, with
   multiballs. With the ramp (0.14.0) the autopilot, which never aims, rides
-  it about once a game. Rerun after moving anything on the table in `pinball.js`.
+  it about once a game. `TABLE=1` and `TABLE=2` play Nebula and Event
+  Horizon; `WHERE=1` prints where each stuck ball sat. Rerun after moving
+  anything on a table in `pinball.js`.
 - `node sheep.mjs`: Space Sheep, 6 games doing nothing and 6 with a bot that
   plays like a quick human (wheel ticks capped, shots capped). On 2026-10-25:
   idle dies first at 10-20 s, the bot reaches wave 6-11 in 1 to 1.5 minutes,

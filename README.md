@@ -15,7 +15,7 @@ Inspired by the iPod Classic. Not affiliated with or endorsed by Apple.
 - **Cover Flow:** turn the phone sideways. Albums with fewer than 4 songs (compilation one-offs) stay out of it; their songs are still under Artists, Songs and Genres.
 - **Now Playing:** the wheel is volume; press the center to scrub. Hold the center to favorite a song (Jellyfin's own favorites). Swipe sideways to flip the art over to the lyrics, when Jellyfin has them. Timed lyrics follow along; untimed ones scroll with your finger.
 - **Keeps playing with the screen off** on Android, with lock screen controls. See DESIGN.md, "Playback", for how.
-- **Extras:** Star Pinball (a space pinball table; the flippers are ⏮ and ⏭), Space Sheep (Spacewar! with sheep) and Tiki Golf. Optional shared high score boards.
+- **Extras:** Star Pinball (space pinball with three tables and five balls that open as your points add up; the flippers are ⏮ and ⏭), Space Sheep (Spacewar! with sheep) and Tiki Golf. Optional shared high score boards.
 - **Optional extras:** TV (free channels from the Tuner Jellyfin plugin), and Speakers (play on Sonos speakers through Home Assistant).
 - **In the car:** works over Bluetooth with song info and steering wheel buttons. **Car Mode** (Settings -> In the car -> Enter Car Mode) turns the screen into big buttons for a phone on the dashboard: the iPod wheel cut into four buttons where its labels sit, Now Playing in large type, and a short menu (Shuffle Songs, Favorites, Playlists, Shuffle a Genre). On Android, put it in split screen next to Maps. For Android Auto and CarPlay themselves, Settings -> In the car links to Jellify, a free Jellyfin app that has both.
 

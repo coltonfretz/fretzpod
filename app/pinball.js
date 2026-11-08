@@ -15,18 +15,25 @@
 // away (Colton, 2026-11-08: the flat first version felt too 2D). Walls,
 // bumpers and the ramp have height, and the ball has a shadow.
 //
+// Three tables and five balls (Colton, 2026-11-08: points unlock two more
+// maps and different balls). Every point scored adds to a running total
+// kept on the phone; a table or ball opens once the total reaches its
+// `need`. The balls only look different, so scores stay comparable on the
+// one shared board. The tables share the lower half (flippers, slingshots,
+// inlanes, plunger) so the flippers feel the same on all of them.
+//
 // Rules: missions in a loop, and each finished one flies you on to the next
-// planet for a bonus. Lighting all three top lanes raises the multiplier
+// stop for a bonus. Lighting all three top lanes raises the multiplier
 // (the flippers shift the lit lanes along, so you can line up the gap); it
 // goes back to x1 when a ball is lost. The black hole mission ends in a
-// two-ball multiball, and a full loop of four missions gives an extra ball.
+// two-ball multiball, and a full loop of missions gives an extra ball.
 // A ball lost in its first few seconds comes back (ball save).
 //
 // Game units: the table is 1 wide and 1.8 tall, (0, 0) its top-left corner,
 // y down; z is height above the table. The physics is flat (x, y); only the
-// ramp and the drawing use z.
+// ramps and the drawing use z.
 import * as scores from './scores.js';
-import { canvasFont as font, runCanvas } from './util.js';
+import { canvasFont as font, runCanvas, store } from './util.js';
 
 const ID = 'pinball';               // the score board's name for it
 const TH = 1.8;                     // table height (width is 1)
@@ -59,37 +66,15 @@ const FLIP_E = 0.45;
 const BUMPER_R = 0.055;
 const BUMPER_KICK = 2.2;            // the least speed a bumper sends a ball off at
 const SLING_KICK = 1.8;
-const HOLE = { x: 0.8, y: 0.95, r: 0.03, hold: 1 };
-// The ramp (added 2026-11-08 with the perspective view): its entrance is a
-// box on the left. A ball rolling in fast enough climbs above the table, runs
-// over the top past the bumpers and drops into the right inlane, onto the
-// right flipper; too slow and it rolls back out. Points are x, y, z.
-const RAMP_PTS = [[0.17, 0.76, 0], [0.16, 0.56, 0.05], [0.19, 0.4, 0.07], [0.3, 0.34, 0.075], [0.6, 0.34, 0.075],
-  [0.78, 0.37, 0.075], [0.86, 0.47, 0.07], [0.87, 0.75, 0.06], [0.87, 1.08, 0.03], [0.87, 1.3, 0]];
-const RAMP_BOX = { x0: 0.1, x1: 0.24, y0: 0.7, y1: 0.78 };
-const RAMP_LIFT = 6;                // how much harder climbing the ramp is than rolling up the table
-const RAMP_EXIT = 3;                // top speed coming off it
-const RAMP_W = 0.035;               // half the ramp's width, for drawing
+const MOON_KICK = 1.6;
+const RAMP_LIFT = 6;                // how much harder climbing a ramp is than rolling up the table
+const RAMP_EXIT = 3;                // top speed coming off one
+const RAMP_W = 0.035;               // half a ramp's width, for drawing
 const LANES = [0.3, 0.46, 0.62];    // top lane centers
 const LANE_Y = 0.18;                // a ball crossing this line downward rolls over the lane
 const TARGET_RESET = 1.5;           // seconds the target bank stays down
-
-const MISSIONS = [
-  { id: 'lanes', text: 'Light all three lanes', need: () => 1 },
-  { id: 'bumpers', text: 'Hit the bumpers', need: (lap) => 12 + 6 * lap },
-  { id: 'ramp', text: 'Ride the ramp', need: (lap) => 2 + lap },
-  { id: 'targets', text: 'Knock down the targets', need: () => 1 },
-  { id: 'hole', text: 'Shoot the black hole', need: () => 1 },
-];
-const PLANETS = [
-  { name: 'the Moon', color: '#c9ccd6' },
-  { name: 'Mars', color: '#e0663f' },
-  { name: 'Jupiter', color: '#d9a066' },
-  { name: 'Saturn', color: '#e8cf8a', ring: true },
-  { name: 'Uranus', color: '#8fd8e8' },
-  { name: 'Neptune', color: '#4f7ae8' },
-  { name: 'Pluto', color: '#b8a08a' },
-];
+const HOLD = 1;                     // seconds the black hole keeps a ball
+const HOLE_R = 0.03;
 
 const TAU = Math.PI * 2;
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
@@ -99,7 +84,9 @@ const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 const seg = (ax, ay, bx, by, o = {}) => ({ ax, ay, bx, by, e: 0.45, t: 0.004, ...o });
 const mirror = (x) => 0.92 - x;     // left and right halves of the playfield
 
-function buildWalls() {
+// What every table has: the outer walls, the plunger lane, the lower half
+// and the top lane posts, plus the table's own walls (`extra`).
+function baseWalls(extra) {
   const w = [seg(0, TH, 0, 0.5)];
   // The top is a half circle, so a launched ball curves round into the field.
   const N = 28;
@@ -117,9 +104,7 @@ function buildWalls() {
   w.push(seg(0, 1.41, 0.29, GY), seg(0.92, 1.41, mirror(0.29), GY));
   // Top lane posts.
   for (const x of [0.22, 0.38, 0.54, 0.7]) w.push(seg(x, 0.12, x, 0.24, { t: 0.008, h: 0.035 }));
-  // The ramp's entrance: open at the bottom, where balls go in.
-  const { x0, x1, y0, y1 } = RAMP_BOX;
-  w.push(seg(x0, y1, x0, y0, { h: 0.05, ramp: 1 }), seg(x0, y0, x1, y0, { h: 0.05, ramp: 1 }), seg(x1, y0, x1, y1, { h: 0.05, ramp: 1 }));
+  w.push(...extra);                                               // the table's own
   // Slingshots: triangles above the flippers; the face toward the middle kicks.
   for (const m of [(x) => x, mirror]) {
     // Kept clear of the guide below by more than a ball, so none wedges under them.
@@ -128,12 +113,30 @@ function buildWalls() {
   }
   return w;
 }
-const WALLS = buildWalls();
 
-// The ramp as a smooth path (Catmull-Rom through RAMP_PTS), each point
+// Ramps (the first added 2026-11-08 with the perspective view): the
+// entrance is a box, open at the bottom, with a peaked roof. A ball rolling in fast enough climbs
+// above the table, runs over the top and drops into the far inlane, onto
+// that side's flipper; too slow and it rolls back out. Points are x, y, z.
+//
+// Left: in on the left, over the top past the bumpers, down into the right inlane.
+const RAMP_L = {
+  pts: [[0.17, 0.76, 0], [0.16, 0.56, 0.05], [0.19, 0.4, 0.07], [0.3, 0.34, 0.075], [0.6, 0.34, 0.075],
+    [0.78, 0.37, 0.075], [0.86, 0.47, 0.07], [0.87, 0.75, 0.06], [0.87, 1.08, 0.03], [0.87, 1.3, 0]],
+  box: { x0: 0.1, x1: 0.24, y0: 0.7, y1: 0.78 },
+};
+// Right: the left one mirrored, but further up the table and higher across
+// the top, so on Event Horizon it passes over the left one.
+const RAMP_R = {
+  pts: [[0.75, 0.76, 0], [0.76, 0.56, 0.06], [0.73, 0.4, 0.09], [0.62, 0.28, 0.11], [0.32, 0.28, 0.11],
+    [0.14, 0.31, 0.11], [0.06, 0.42, 0.1], [0.05, 0.75, 0.08], [0.05, 1.08, 0.04], [0.05, 1.3, 0]],
+  box: { x0: 0.68, x1: 0.82, y0: 0.7, y1: 0.78 },
+};
+
+// A ramp as a smooth path (Catmull-Rom through its points), each point
 // [x, y, z, distance along it].
-function sampleRamp() {
-  const P = RAMP_PTS, out = [];
+function sampleRamp(P) {
+  const out = [];
   for (let i = 0; i < P.length - 1; i++) {
     const p0 = P[Math.max(0, i - 1)], p1 = P[i], p2 = P[i + 1], p3 = P[Math.min(P.length - 1, i + 2)];
     for (let k = 0; k < 8; k++) {
@@ -147,24 +150,176 @@ function sampleRamp() {
   for (let i = 1; i < out.length; i++) out[i].push(out[i - 1][3] + Math.hypot(out[i][0] - out[i - 1][0], out[i][1] - out[i - 1][1]));
   return out;
 }
-const RAMP = sampleRamp();
-const RAMP_LEN = RAMP[RAMP.length - 1][3];
 
-// Where distance s along the ramp is: position, height, direction (tx, ty)
-// and how steeply it climbs (dz per unit along).
-function rampAt(s) {
+// Where distance s along a ramp's path is: position, height, direction
+// (tx, ty) and how steeply it climbs (dz per unit along).
+function rampAt(path, s) {
   let i = 0;
-  while (i < RAMP.length - 2 && RAMP[i + 1][3] <= s) i++;
-  const a = RAMP[i], b = RAMP[i + 1], len = b[3] - a[3] || 1e-9;
+  while (i < path.length - 2 && path[i + 1][3] <= s) i++;
+  const a = path[i], b = path[i + 1], len = b[3] - a[3] || 1e-9;
   const f = clamp((s - a[3]) / len, 0, 1);
   return { x: a[0] + (b[0] - a[0]) * f, y: a[1] + (b[1] - a[1]) * f, z: a[2] + (b[2] - a[2]) * f,
     tx: (b[0] - a[0]) / len, ty: (b[1] - a[1]) / len, dz: (b[2] - a[2]) / len };
 }
 // Closes the plunger lane once a ball has left it, so it can't fall back in.
 const GATE = seg(0.92, 0.45, 0.985, 0.4);
-const BUMPERS = [[0.32, 0.5], [0.6, 0.5], [0.46, 0.68]];
 const FLIPPERS = [{ x: 0.295, y: 1.58, dir: 1 }, { x: mirror(0.295), y: 1.58, dir: -1 }];
-const TARGETS = [0, 1, 2, 3].map((i) => seg(0.04, 0.86 + i * 0.06, 0.04, 0.915 + i * 0.06, { t: 0.01, e: 0.3 }));
+
+// Where each table's missions fly you. `glow` draws a star, `galaxy` a
+// spiral seen from the side, `ring` gives a planet rings.
+const PLANETS = [
+  { name: 'the Moon', color: '#c9ccd6' },
+  { name: 'Mars', color: '#e0663f' },
+  { name: 'Jupiter', color: '#d9a066' },
+  { name: 'Saturn', color: '#e8cf8a', ring: true },
+  { name: 'Uranus', color: '#8fd8e8' },
+  { name: 'Neptune', color: '#4f7ae8' },
+  { name: 'Pluto', color: '#b8a08a' },
+];
+const STARS = [
+  { name: 'Sirius', color: '#cfe3ff', glow: true },
+  { name: 'Vega', color: '#e8f0ff', glow: true },
+  { name: 'Betelgeuse', color: '#ff7a4f', glow: true },
+  { name: 'Rigel', color: '#9fc4ff', glow: true },
+  { name: 'Antares', color: '#ff5a3c', glow: true },
+  { name: 'Polaris', color: '#fff2c8', glow: true },
+  { name: 'Deneb', color: '#dfe8ff', glow: true },
+];
+const GALAXIES = [
+  { name: 'Andromeda', color: '#d8c8ff', galaxy: true },
+  { name: 'the Whirlpool', color: '#9fd0ff', galaxy: true },
+  { name: 'the Sombrero', color: '#ffe0a8', galaxy: true },
+  { name: 'Triangulum', color: '#c8f0ff', galaxy: true },
+  { name: 'the Pinwheel', color: '#ffc8e8', galaxy: true },
+  { name: 'the Cartwheel', color: '#ffd28a', galaxy: true },
+];
+
+const M = {
+  lanes: { id: 'lanes', text: 'Light all three lanes', need: () => 1 },
+  bumpers: { id: 'bumpers', text: 'Hit the bumpers', need: (lap) => 12 + 6 * lap },
+  ramp: { id: 'ramp', text: 'Ride the ramp', need: (lap) => 2 + lap },
+  ramps: { id: 'ramp', text: 'Ride the ramps', need: (lap) => 3 + lap },
+  moon: { id: 'moon', text: 'Hit the moon', need: (lap) => 4 + 2 * lap },
+  moons: { id: 'moon', text: 'Hit the moons', need: (lap) => 6 + 3 * lap },
+  targets: { id: 'targets', text: 'Knock down the targets', need: () => 1 },
+  hole: { id: 'hole', text: 'Shoot the black hole', need: () => 1 },
+};
+
+// The tables. Bumpers are [x, y, radius]. Moons are bumpers that circle a
+// point: center, orbit radius, own radius, rad/s, starting angle. Targets
+// are a bank of four drop targets on a side wall (face: which way they
+// point). The hole's `out` is the speed it spits the ball out at, toward a
+// flipper. Clearances: a ball (0.05 across) passes anywhere there's 0.06
+// between two things, and can't get into anything narrower than 0.05; a
+// moon's orbit is kept tight enough to its planet that no ball fits between.
+const TABLES = [
+  {
+    id: 'run', name: 'Star Run', need: 0,
+    ramps: [RAMP_L],
+    bumpers: [[0.32, 0.5, BUMPER_R], [0.6, 0.5, BUMPER_R], [0.46, 0.68, BUMPER_R]],
+    moons: [],
+    targets: { x: 0.04, face: 1 },
+    hole: { x: 0.8, y: 0.95, out: [-1.1, 1.65] },
+    missions: [M.lanes, M.bumpers, M.ramp, M.targets, M.hole],
+    stops: PLANETS,
+    theme: {
+      floor: ['#07081a', '#161a3d'], grid: '155,123,255', wall: '155,123,255', edge: '#b9a6ff', ramp: '79,209,232',
+      bumper: { side: '#123a4a', top: '#1b2246', rim: '#4fd1e8', cap: '#2e6f86', lit: '#bff4ff' },
+      lane: ['#4fd1e8', '#262b52'], hole: '#7b5cff', target: ['#f5c26b', '#c98f2e', '245,194,107'],
+    },
+  },
+  {
+    // A planet with a moon going round it in the middle, two bumpers beside
+    // them, the ramp on the right.
+    id: 'nebula', name: 'Nebula', need: 200_000,
+    ramps: [RAMP_R],
+    bumpers: [[0.46, 0.56, 0.06], [0.18, 0.44, BUMPER_R], [0.74, 0.44, BUMPER_R]],
+    moons: [{ cx: 0.46, cy: 0.56, orbit: 0.14, r: 0.04, w: 1.3, a0: 0 }],
+    targets: { x: 0.88, face: -1 },
+    hole: { x: 0.15, y: 0.95, out: [1.1, 1.65] },
+    missions: [M.lanes, M.moon, M.ramp, M.bumpers, M.targets, M.hole],
+    stops: STARS,
+    theme: {
+      floor: ['#12061a', '#341040'], grid: '255,120,210', wall: '255,120,210', edge: '#ff9fe0', ramp: '61,220,132',
+      bumper: { side: '#3a1240', top: '#2a0f33', rim: '#ff7ad1', cap: '#8a2f73', lit: '#ffd6f3' },
+      lane: ['#3ddc84', '#3a1d45'], hole: '#ff5fa2', target: ['#8fe8b0', '#2f9e5f', '143,232,176'],
+    },
+  },
+  {
+    // A star with two moons going round it, both ramps crossing over the
+    // top, and the black hole in the middle where center shots go.
+    id: 'horizon', name: 'Event Horizon', need: 500_000,
+    ramps: [RAMP_L, RAMP_R],
+    bumpers: [[0.46, 0.56, 0.06]],
+    moons: [
+      { cx: 0.46, cy: 0.56, orbit: 0.14, r: 0.04, w: 1.5, a0: 0 },
+      { cx: 0.46, cy: 0.56, orbit: 0.14, r: 0.04, w: 1.5, a0: Math.PI },
+    ],
+    targets: { x: 0.04, face: 1 },
+    hole: { x: 0.46, y: 0.95, out: [-0.5, 1.6] },
+    missions: [M.lanes, M.moons, M.ramps, M.targets, M.hole],
+    stops: GALAXIES,
+    theme: {
+      floor: ['#080503', '#2b170a'], grid: '255,170,90', wall: '255,170,90', edge: '#ffbf80', ramp: '79,209,232',
+      bumper: { side: '#4a2a0a', top: '#2a1606', rim: '#ffb347', cap: '#a85d12', lit: '#fff0c8' },
+      lane: ['#ffb347', '#3a2410'], hole: '#ff7a3c', target: ['#7fe0f0', '#2b8fa3', '127,224,240'],
+    },
+  },
+];
+
+// A table's walls, ramp paths and targets, worked out once.
+function build(def) {
+  const extra = [];
+  const ramps = def.ramps.map((r) => {
+    const { x0, x1, y0, y1 } = r.box;
+    // The back is a peaked roof: a flat one across the slope is a shelf a
+    // slow ball comes to rest on (the sim found balls sitting there).
+    const mx = (x0 + x1) / 2, peak = y0 - 0.045, o = { h: 0.05, ramp: 1 };
+    extra.push(seg(x0, y1, x0, y0, o), seg(x0, y0, mx, peak, o), seg(mx, peak, x1, y0, o), seg(x1, y0, x1, y1, o));
+    const path = sampleRamp(r.pts);
+    return { box: r.box, path, len: path[path.length - 1][3] };
+  });
+  const walls = baseWalls(extra);
+  const { x } = def.targets;
+  const targets = [0, 1, 2, 3].map((i) => seg(x, 0.86 + i * 0.06, x, 0.915 + i * 0.06, { t: 0.01, e: 0.3 }));
+  return { ...def, walls, ramps, targetSegs: targets };
+}
+const BUILT = new Map();
+const table = (i) => { if (!BUILT.has(i)) BUILT.set(i, build(TABLES[i])); return BUILT.get(i); };
+
+// ---------- balls ----------
+//
+// Looks only. `trail` leaves a fading tail (an rgb triple), `glow` a halo,
+// `craters` dark spots.
+const BALL_STYLES = [
+  { id: 'steel', name: 'Steel', need: 0, light: '#ffffff', dark: '#8a90ab' },
+  { id: 'moon', name: 'Moon Rock', need: 50_000, light: '#eceef3', dark: '#5f626e', craters: true },
+  { id: 'mars', name: 'Red Planet', need: 125_000, light: '#ffc09a', dark: '#9c3518' },
+  { id: 'comet', name: 'Comet', need: 300_000, light: '#ffffff', dark: '#4fb6e8', trail: '150,220,255' },
+  { id: 'sun', name: 'Sun', need: 700_000, light: '#fffbe0', dark: '#ff8a1f', glow: true, trail: '255,170,60' },
+];
+
+// ---------- what's kept on the phone ----------
+//
+// {points: every game's score added up, ball: the one in use, best: per table}.
+// Points start from the best score already on the phone, so games played
+// before tables and balls existed still count for something.
+const SAVE_KEY = 'fp.pinball.save';
+export const pinballSave = {
+  load() {
+    let d = {};
+    try { d = JSON.parse(store.get(SAVE_KEY, '{}')) || {}; } catch { /* start over */ }
+    return { points: scores.localBest(ID), ball: 'steel', best: {}, ...d };
+  },
+  save(d) { store.set(SAVE_KEY, JSON.stringify(d)); },
+};
+const isOpen = (thing) => pinballSave.load().points >= thing.need;
+export const PINBALL_TABLES = TABLES;
+export const PINBALL_BALLS = BALL_STYLES;
+export { isOpen as pinballOpen };
+
+// What a locked one shows in the menu: "Locked · 200k".
+export const lockText = (thing) => `Locked · ${thing.need >= 1e6 ? thing.need / 1e6 + 'M' : thing.need / 1000 + 'k'}`;
 
 // Where (x, y) touches segment s, pushed out: the outward normal, or null.
 function touchSeg(b, s, r = R) {
@@ -194,13 +349,16 @@ function bounce(b, n, e, sx = 0, sy = 0) {
 }
 
 export class StarPinball {
-  constructor(feedback) {
-    this.title = 'Star Pinball';
+  constructor(tableIndex, feedback) {
+    this.T = table(tableIndex);
+    this.title = this.T.name;
     this.rawButtons = true;         // flippers need press and release as they happen (wheel.js)
     this.feedback = feedback;       // click + buzz, as on the wheel
     this.canvas = null;             // runCanvas's (util.js), with raf
     this.raf = 0;
     this.best = scores.localBest(ID);
+    const pick = pinballSave.load().ball;
+    this.style = BALL_STYLES.find((s) => s.id === pick && isOpen(s)) || BALL_STYLES[0];
     // Stars on the table and in the sky around it (x, y as fractions).
     this.stars = Array.from({ length: 70 }, () => ({ x: Math.random(), y: Math.random() * TH, a: 0.25 + Math.random() * 0.6 }));
     this.sky = Array.from({ length: 60 }, () => ({ x: Math.random(), y: Math.random(), a: 0.15 + Math.random() * 0.5 }));
@@ -209,6 +367,8 @@ export class StarPinball {
 
   newGame() {
     this.sent = false;              // this game's score went to the board
+    this.banked = false;            // this game's points went on the total
+    this.unlocked = [];             // what those points opened, for the Game Over box
     this.result = null;             // what the board said back
     this.score = 0;
     this.left = BALLS;              // balls still to play, counting the one on the plunger
@@ -217,6 +377,7 @@ export class StarPinball {
     this.done = 0;                  // missions finished
     this.progress = 0;
     this.t = 0;
+    this.pt = 0;                    // physics time, which the moons go round by
     this.lanes = [false, false, false];
     this.targets = [true, true, true, true];
     this.targetsBack = 0;           // when the dropped bank stands up again
@@ -226,28 +387,49 @@ export class StarPinball {
     this.pulling = false;
     this.pull = 0;
     this.saveUntil = 0;
-    this.extraAt = 4;
+    this.extraAt = this.T.missions.length;
     this.state = 'play';
     this.balls = [];
     this.newBall();
   }
 
   newBall() {
-    // ramp: distance along the ramp while riding it (rv its speed), else undefined; z its height
-    this.balls.push({ x: LANE_X, y: PLUNGER_Y - R, z: 0, vx: 0, vy: 0, plunger: true, lane: true, fresh: true, held: 0, cool: 0, still: 0 });
+    // ramp: distance along ramp ri while riding it (rv its speed), else undefined; z its height
+    this.balls.push({ x: LANE_X, y: PLUNGER_Y - R, z: 0, vx: 0, vy: 0, plunger: true, lane: true, fresh: true, held: 0, cool: 0, still: 0, trail: [] });
   }
 
-  get mission() { return MISSIONS[this.done % MISSIONS.length]; }
-  get planet() { return PLANETS[this.done % PLANETS.length]; }
-  need() { return this.mission.need(Math.floor(this.done / MISSIONS.length)); }
+  get mission() { return this.T.missions[this.done % this.T.missions.length]; }
+  get planet() { return this.T.stops[this.done % this.T.stops.length]; }
+  need() { return this.mission.need(Math.floor(this.done / this.T.missions.length)); }
+
+  // Where moon i is now, and how fast it's moving.
+  moonAt(i) {
+    const m = this.T.moons[i], a = m.a0 + m.w * this.pt;
+    return { x: m.cx + Math.cos(a) * m.orbit, y: m.cy + Math.sin(a) * m.orbit, vx: -Math.sin(a) * m.orbit * m.w, vy: Math.cos(a) * m.orbit * m.w, r: m.r };
+  }
 
   attach(ui) { this.ui = ui; }
 
   leave() {
     // Leaving throws the game away, so a game in progress counts as ended.
-    if (this.score > 0) scores.gameOver(this, ID);
+    if (this.score > 0) this.finish();
     if (this.state === 'play') this.state = 'paused';
     this.release();
+  }
+
+  // A game ended: its points go on the total (opening whatever they reach)
+  // and its score to the board.
+  finish() {
+    if (!this.banked) {
+      this.banked = true;
+      const d = pinballSave.load(), before = d.points;
+      d.points = before + this.score;
+      d.best[this.T.id] = Math.max(d.best[this.T.id] || 0, this.score);
+      pinballSave.save(d);
+      const opened = (list, kind) => list.filter((x) => x.need > before && x.need <= d.points).map((x) => `New ${kind}: ${x.name}`);
+      this.unlocked = [...opened(TABLES, 'table'), ...opened(BALL_STYLES, 'ball')];
+    }
+    scores.gameOver(this, ID);
   }
 
   release() {
@@ -318,7 +500,7 @@ export class StarPinball {
     this.progress = 0;
     if (id === 'hole') this.multiball();
     if (this.done >= this.extraAt) {
-      this.extraAt += MISSIONS.length;
+      this.extraAt += this.T.missions.length;
       this.left++;
       this.say('Extra ball!', 2.4);
     }
@@ -345,9 +527,9 @@ export class StarPinball {
     }
   }
 
-  rampDone() {
+  rampDone(ri) {
     this.add(2000);
-    this.flash.ramp = this.t + 0.6;
+    this.flash['ramp' + ri] = this.t + 0.6;
     this.feedback();
     this.advance('ramp');
   }
@@ -378,7 +560,7 @@ export class StarPinball {
     scores.keepBest(this, ID);
     if (this.left <= 0) {
       this.state = 'over';
-      scores.gameOver(this, ID);
+      this.finish();
       return;
     }
     this.ballNo++;
@@ -396,9 +578,16 @@ export class StarPinball {
     if (this.targetsBack && this.t >= this.targetsBack) { this.targets = [true, true, true, true]; this.targetsBack = 0; }
     const n = Math.ceil(dt / H);
     for (let k = 0; k < n; k++) this.physics(dt / n);
+    if (this.style.trail) {
+      for (const b of this.balls) {
+        b.trail.unshift({ x: b.x, y: b.y, z: b.z });
+        if (b.trail.length > 9 || b.plunger || b.held > 0) b.trail.length = b.plunger || b.held > 0 ? 0 : 9;
+      }
+    }
   }
 
   physics(h) {
+    this.pt += h;
     for (const f of this.flips) {
       const target = f.held ? FLIP_UP : FLIP_REST;
       const before = f.a;
@@ -413,6 +602,7 @@ export class StarPinball {
   }
 
   move(b, h) {
+    const T = this.T;
     if (b.plunger) {
       if (b.auto !== undefined) {
         b.auto -= h;
@@ -425,7 +615,7 @@ export class StarPinball {
     if (b.ramp !== undefined) { this.rideRamp(b, h); return; }
     if (b.held > 0) {
       b.held -= h;
-      if (b.held <= 0) { b.vx = -1.1; b.vy = 1.65; b.cool = 0.5; }
+      if (b.held <= 0) { b.vx = T.hole.out[0]; b.vy = T.hole.out[1]; b.cool = 0.5; }
       return;
     }
     b.cool = Math.max(0, b.cool - h);
@@ -437,7 +627,7 @@ export class StarPinball {
     b.y += b.vy * h;
     if (b.lane && b.x < 0.9) b.lane = false;
 
-    for (const s of WALLS) {
+    for (const s of T.walls) {
       const n = touchSeg(b, s);
       if (!n) continue;
       const hit = bounce(b, n, s.e);
@@ -452,11 +642,11 @@ export class StarPinball {
     if (!b.lane) { const n = touchSeg(b, GATE); if (n) bounce(b, n, 0.4); }
     this.targets.forEach((up, i) => {
       if (!up) return;
-      const n = touchSeg(b, TARGETS[i]);
-      if (n && bounce(b, n, TARGETS[i].e) > 0.2) this.hitTarget(i);
+      const s = T.targetSegs[i], n = touchSeg(b, s);
+      if (n && bounce(b, n, s.e) > 0.2) this.hitTarget(i);
     });
-    BUMPERS.forEach(([x, y], i) => {
-      const n = touchPoint(b, x, y, R + BUMPER_R);
+    T.bumpers.forEach(([x, y, r], i) => {
+      const n = touchPoint(b, x, y, R + r);
       if (!n) return;
       bounce(b, n, 0.6);
       const out = b.vx * n.nx + b.vy * n.ny;
@@ -466,24 +656,43 @@ export class StarPinball {
       this.advance('bumpers');
       this.feedback();
     });
+    // Moons: bumpers on the move, so the kick is worked out against how fast
+    // the moon itself is going.
+    T.moons.forEach((_, i) => {
+      const m = this.moonAt(i);
+      const n = touchPoint(b, m.x, m.y, R + m.r);
+      if (!n) return;
+      bounce(b, n, 0.6, m.vx, m.vy);
+      const out = (b.vx - m.vx) * n.nx + (b.vy - m.vy) * n.ny;
+      if (out < MOON_KICK) { b.vx += n.nx * (MOON_KICK - out); b.vy += n.ny * (MOON_KICK - out); }
+      this.flash['m' + i] = this.t + 0.15;
+      this.add(300);
+      this.advance('moon');
+      this.feedback();
+    });
     this.flipperHits(b);
-    // Into the ramp's entrance, going up the table.
-    if (b.vy < 0 && b.x > RAMP_BOX.x0 && b.x < RAMP_BOX.x1 && b.y > RAMP_BOX.y0 && b.y < RAMP_BOX.y1) {
-      b.ramp = 0;
-      b.rv = Math.hypot(b.vx, b.vy);
-      return;
+    // Into a ramp's entrance, going up the table.
+    if (b.vy < 0) {
+      const ri = T.ramps.findIndex(({ box }) => b.x > box.x0 && b.x < box.x1 && b.y > box.y0 && b.y < box.y1);
+      if (ri >= 0) {
+        b.ramp = 0;
+        b.ri = ri;
+        b.rv = Math.hypot(b.vx, b.vy);
+        return;
+      }
     }
     // Rolling over a top lane.
     if (y0 < LANE_Y && b.y >= LANE_Y) {
       const i = LANES.findIndex((x) => Math.abs(b.x - x) < 0.075);
       if (i >= 0) this.laneOver(i);
     }
-    // The black hole holds the ball a moment, then spits it out toward the left flipper.
-    if (!b.cool && Math.hypot(b.x - HOLE.x, b.y - HOLE.y) < HOLE.r && Math.hypot(b.vx, b.vy) < 3.5) {
-      b.x = HOLE.x; b.y = HOLE.y; b.vx = b.vy = 0;
-      b.held = HOLE.hold;
+    // The black hole holds the ball a moment, then spits it out toward a flipper.
+    const { hole } = T;
+    if (!b.cool && Math.hypot(b.x - hole.x, b.y - hole.y) < HOLE_R && Math.hypot(b.vx, b.vy) < 3.5) {
+      b.x = hole.x; b.y = hole.y; b.vx = b.vy = 0;
+      b.held = HOLD;
       this.add(2500);
-      this.flash.hole = this.t + HOLE.hold;
+      this.flash.hole = this.t + HOLD;
       this.feedback();
       this.advance('hole');
     }
@@ -496,28 +705,29 @@ export class StarPinball {
     } else b.still = 0;
   }
 
-  // Along the ramp: slowed while it climbs (the table's slope and the ramp's
-  // own), sped up coming down. Off the far end into the right inlane, or
-  // back out of the entrance if it ran out of speed.
+  // Along a ramp: slowed while it climbs (the table's slope and the ramp's
+  // own), sped up coming down. Off the far end into an inlane, or back out
+  // of the entrance if it ran out of speed.
   rideRamp(b, h) {
-    const p = rampAt(b.ramp);
+    const ramp = this.T.ramps[b.ri];
+    const p = rampAt(ramp.path, b.ramp);
     b.rv += (G * p.ty - RAMP_LIFT * p.dz - 0.25 * Math.sign(b.rv)) * h;
     b.ramp += b.rv * h;
     if (b.ramp <= 0) {
       delete b.ramp;
-      b.x = (RAMP_BOX.x0 + RAMP_BOX.x1) / 2; b.y = RAMP_BOX.y1 + R + 0.01; b.z = 0;
+      b.x = (ramp.box.x0 + ramp.box.x1) / 2; b.y = ramp.box.y1 + R + 0.01; b.z = 0;
       b.vx = 0; b.vy = Math.max(0.3, -b.rv);
       return;
     }
-    if (b.ramp >= RAMP_LEN) {
-      const e = rampAt(RAMP_LEN - 1e-6), v = Math.min(b.rv, RAMP_EXIT);
+    if (b.ramp >= ramp.len) {
+      const e = rampAt(ramp.path, ramp.len - 1e-6), v = Math.min(b.rv, RAMP_EXIT);
       delete b.ramp;
       b.x = e.x; b.y = e.y; b.z = 0;
       b.vx = e.tx * v; b.vy = e.ty * v;
-      this.rampDone();
+      this.rampDone(b.ri);
       return;
     }
-    const q = rampAt(b.ramp);
+    const q = rampAt(ramp.path, b.ramp);
     b.x = q.x; b.y = q.y; b.z = q.z;
   }
 
@@ -561,6 +771,7 @@ export class StarPinball {
   // slant. Height (z) lifts a point up the screen by its shrunk size.
 
   draw({ g, w, h, dpr }) {
+    const T = this.T, C = T.theme;
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     g.fillStyle = '#05060d';
     g.fillRect(0, 0, w, h);
@@ -586,8 +797,8 @@ export class StarPinball {
     outline.push([1, TH]);
     const floorPts = outline.map(([x, y]) => P(x, y));
     const shade = g.createLinearGradient(0, P(0, 0)[1], 0, yb);
-    shade.addColorStop(0, '#07081a');
-    shade.addColorStop(1, '#161a3d');
+    shade.addColorStop(0, C.floor[0]);
+    shade.addColorStop(1, C.floor[1]);
     g.save();
     path(floorPts);
     g.closePath();
@@ -596,24 +807,29 @@ export class StarPinball {
     g.clip();
     for (const s of this.stars) { const [x, y] = P(s.x, s.y); g.fillStyle = `rgba(220,226,255,${s.a})`; g.fillRect(x, y, 1.1, 1.1); }
     // a faint grid on the floor sells the slant
-    g.strokeStyle = 'rgba(155,123,255,.07)';
+    g.strokeStyle = `rgba(${C.grid},.07)`;
     g.lineWidth = 1;
     g.beginPath();
     for (let y = 0.2; y < TH; y += 0.2) { g.moveTo(...P(0, y)); g.lineTo(...P(1, y)); }
     for (let x = 0.1; x < 1; x += 0.1) { g.moveTo(...P(x, 0)); g.lineTo(...P(x, TH)); }
     g.stroke();
-    // floor markings: lane lights, the black hole, the plunger lane
-    LANES.forEach((x, i) => { flat(x, 0.29, 0.018); g.fillStyle = this.lanes[i] ? '#4fd1e8' : '#262b52'; g.fill(); });
-    const [hx, hy] = P(HOLE.x, HOLE.y), hrx = 0.045 * across(HOLE.y), hry = 0.045 * along(HOLE.y);
+    // floor markings: lane lights, the moons' orbits, the black hole
+    LANES.forEach((x, i) => { flat(x, 0.29, 0.018); g.fillStyle = this.lanes[i] ? C.lane[0] : C.lane[1]; g.fill(); });
+    g.strokeStyle = `rgba(${C.grid},.25)`;
+    g.setLineDash([3, 4]);
+    for (const m of T.moons) { flat(m.cx, m.cy, m.orbit); g.stroke(); }
+    g.setLineDash([]);
+    const { hole } = T;
+    const [hx, hy] = P(hole.x, hole.y), hrx = 0.045 * across(hole.y), hry = 0.045 * along(hole.y);
     const glow = g.createRadialGradient(hx, hy, 0, hx, hy, hrx * 1.6);
     glow.addColorStop(0, '#000');
     glow.addColorStop(0.55, '#000');
-    glow.addColorStop(0.7, on('hole') ? '#ffffff' : '#7b5cff');
-    glow.addColorStop(1, 'rgba(155,123,255,0)');
+    glow.addColorStop(0.7, on('hole') ? '#ffffff' : C.hole);
+    glow.addColorStop(1, 'rgba(0,0,0,0)');
     g.fillStyle = glow;
     g.beginPath(); g.ellipse(hx, hy, hrx * 1.6, hry * 1.6, 0, 0, TAU); g.fill();
     const spin = this.t * (this.mission.id === 'hole' ? 6 : 1.5);
-    g.strokeStyle = 'rgba(190,170,255,.7)';
+    g.strokeStyle = 'rgba(255,255,255,.55)';
     for (let j = 0; j < 3; j++) {
       const f = 0.75 + j * 0.2;
       g.beginPath(); g.ellipse(hx, hy, hrx * f, hry * f, 0, spin + j * 2, spin + j * 2 + 1.6); g.stroke();
@@ -627,40 +843,32 @@ export class StarPinball {
       const kick = s.kick !== undefined;
       path([a0, b0, b1, a1]);
       g.closePath();
-      g.fillStyle = kick ? 'rgba(255,143,177,.22)' : s.ramp ? 'rgba(79,209,232,.2)' : 'rgba(155,123,255,.16)';
+      g.fillStyle = kick ? 'rgba(255,143,177,.22)' : s.ramp ? `rgba(${C.ramp},.2)` : `rgba(${C.wall},.16)`;
       g.fill();
-      g.strokeStyle = kick ? (on('sling' + s.sling) ? '#ffffff' : '#ff8fb1') : s.ramp ? '#4fd1e8' : '#b9a6ff';
+      g.strokeStyle = kick ? (on('sling' + s.sling) ? '#ffffff' : '#ff8fb1') : s.ramp ? `rgb(${C.ramp})` : C.edge;
       g.lineWidth = kick ? 2 : 1.4;
       g.beginPath(); g.moveTo(...a1); g.lineTo(...b1); g.stroke();
     }
     // drop targets: little blocks (face toward the field, and top) that drop flat
+    const face = T.targets.face;
     this.targets.forEach((up, i) => {
-      const s = TARGETS[i], ht = up ? 0.05 : 0.004, x0 = s.ax - 0.012, x1 = s.ax + 0.012;
-      path([P(x1, s.ay), P(x1, s.by), P(x1, s.by, ht), P(x1, s.ay, ht)]);
+      const s = T.targetSegs[i], ht = up ? 0.05 : 0.004, xb = s.ax - 0.012 * face, xf = s.ax + 0.012 * face;
+      path([P(xf, s.ay), P(xf, s.by), P(xf, s.by, ht), P(xf, s.ay, ht)]);
       g.closePath();
-      g.fillStyle = up ? '#c98f2e' : 'rgba(245,194,107,.15)';
+      g.fillStyle = up ? C.target[1] : `rgba(${C.target[2]},.15)`;
       g.fill();
-      path([P(x0, s.ay, ht), P(x1, s.ay, ht), P(x1, s.by, ht), P(x0, s.by, ht)]);
+      path([P(xb, s.ay, ht), P(xf, s.ay, ht), P(xf, s.by, ht), P(xb, s.by, ht)]);
       g.closePath();
-      g.fillStyle = up ? '#f5c26b' : 'rgba(245,194,107,.2)';
+      g.fillStyle = up ? C.target[0] : `rgba(${C.target[2]},.2)`;
       g.fill();
     });
-    // bumpers: short cylinders, lit on top when hit
-    for (const [i, [x, y]] of [...BUMPERS.entries()].sort((a, b) => a[1][1] - b[1][1])) {
-      const rx = BUMPER_R * across(y), ry = BUMPER_R * along(y);
-      const [bx, by] = P(x, y), [tx, ty] = P(x, y, 0.05);
-      g.fillStyle = '#123a4a';
-      g.beginPath(); g.ellipse(bx, by, rx, ry, 0, 0, TAU); g.fill();
-      g.fillRect(bx - rx, ty, rx * 2, by - ty);
-      const lit = on('b' + i);
-      g.fillStyle = lit ? '#bff4ff' : '#1b2246';
-      g.beginPath(); g.ellipse(tx, ty, rx, ry, 0, 0, TAU); g.fill();
-      g.strokeStyle = '#4fd1e8';
-      g.lineWidth = 1.5;
-      g.stroke();
-      g.fillStyle = lit ? '#4fd1e8' : '#2e6f86';
-      g.beginPath(); g.ellipse(tx, ty, rx * 0.42, ry * 0.42, 0, 0, TAU); g.fill();
-    }
+    // bumpers (short cylinders, lit on top when hit) and moons (floating
+    // balls with a shadow), far ones first
+    const things = [
+      ...T.bumpers.map(([x, y, r], i) => ({ y, draw: () => this.drawBumper(g, P, across, along, x, y, r, on('b' + i)) })),
+      ...T.moons.map((_, i) => { const m = this.moonAt(i); return { y: m.y, draw: () => this.drawMoon(g, P, across, along, m, on('m' + i)) }; }),
+    ];
+    for (const t of things.sort((a, b) => a.y - b.y)) t.draw();
     // plunger
     const pullNow = this.pulling ? this.pull * PULL : 0;
     g.strokeStyle = '#8c90a6';
@@ -675,53 +883,114 @@ export class StarPinball {
       g.beginPath(); g.moveTo(...P(F.x, F.y)); g.lineTo(...P(tip[0], tip[1])); g.stroke();
       g.strokeStyle = '#f4f6ff';
       g.beginPath(); g.moveTo(...P(F.x, F.y, 0.02)); g.lineTo(...P(tip[0], tip[1], 0.02)); g.stroke();
-      g.fillStyle = '#9b7bff';
+      g.fillStyle = C.edge;
       g.beginPath(); g.arc(...P(F.x, F.y, 0.02), FLIP_R * across(F.y) * 0.6, 0, TAU); g.fill();
     });
-    // balls on the table, then the ramp over them, then balls riding it
+    // balls on the table, then each ramp with the balls riding it, lower
+    // ramp first. A ramp is lit while you ride it, and pulses while it's the
+    // mission.
     for (const b of this.balls) if (b.ramp === undefined) this.drawBall(g, b, P, across, along);
-    // Lit while you ride it, and pulsing while it's the mission.
     const pulse = this.mission.id === 'ramp' ? 0.5 + 0.5 * Math.sin(this.t * 5) : 0;
-    this.drawRamp(g, P, on('ramp'), pulse);
-    for (const b of this.balls) if (b.ramp !== undefined) this.drawBall(g, b, P, across, along);
+    T.ramps.forEach((r, ri) => {
+      this.drawRamp(g, P, r.path, C.ramp, on('ramp' + ri), pulse);
+      for (const b of this.balls) if (b.ramp !== undefined && b.ri === ri) this.drawBall(g, b, P, across, along);
+    });
 
     this.drawPanel(g, ox + Sb + w * 0.03, w - w * 0.025, h);
-    if (this.state === 'over') scores.drawBox(g, scores.overLines(this.score, this.best, this.result), w / 2, h * 0.5, h);
-    else if (this.state === 'paused') scores.drawBox(g, ['Paused'], cx, h * 0.5, h);
+    if (this.state === 'over') {
+      const lines = scores.overLines(this.score, this.best, this.result);
+      lines.splice(lines.length - 1, 0, ...this.unlocked);
+      scores.drawBox(g, lines, w / 2, h * 0.5, h);
+    } else if (this.state === 'paused') scores.drawBox(g, ['Paused'], cx, h * 0.5, h);
   }
 
   // The walls in drawing order, far end of the table first, so a near
   // wall's face covers the ones behind it. Fixed, so worked out once.
   wallsFarFirst() {
-    if (!this.wallOrder) this.wallOrder = WALLS.slice().sort((a, b) => Math.max(a.ay, a.by) - Math.max(b.ay, b.by));
+    if (!this.wallOrder) this.wallOrder = this.T.walls.slice().sort((a, b) => Math.max(a.ay, a.by) - Math.max(b.ay, b.by));
     const gate = !this.balls.some((b) => b.lane);
     return gate ? [GATE, ...this.wallOrder] : this.wallOrder;
   }
 
+  drawBumper(g, P, across, along, x, y, r, lit) {
+    const B = this.T.theme.bumper;
+    const rx = r * across(y), ry = r * along(y);
+    const [bx, by] = P(x, y), [tx, ty] = P(x, y, 0.05);
+    g.fillStyle = B.side;
+    g.beginPath(); g.ellipse(bx, by, rx, ry, 0, 0, TAU); g.fill();
+    g.fillRect(bx - rx, ty, rx * 2, by - ty);
+    g.fillStyle = lit ? B.lit : B.top;
+    g.beginPath(); g.ellipse(tx, ty, rx, ry, 0, 0, TAU); g.fill();
+    g.strokeStyle = B.rim;
+    g.lineWidth = 1.5;
+    g.stroke();
+    g.fillStyle = lit ? B.rim : B.cap;
+    g.beginPath(); g.ellipse(tx, ty, rx * 0.42, ry * 0.42, 0, 0, TAU); g.fill();
+  }
+
+  drawMoon(g, P, across, along, m, lit) {
+    const r = m.r * across(m.y);
+    const [sx, sy] = P(m.x + 0.012, m.y + 0.01);
+    g.fillStyle = 'rgba(0,0,0,.45)';
+    g.beginPath(); g.ellipse(sx, sy, r, m.r * along(m.y), 0, 0, TAU); g.fill();
+    const [x, y] = P(m.x, m.y, m.r + 0.01);
+    const shine = g.createRadialGradient(x - r * 0.35, y - r * 0.35, r * 0.1, x, y, r);
+    shine.addColorStop(0, lit ? '#ffffff' : '#e4e6ee');
+    shine.addColorStop(1, lit ? this.T.theme.bumper.rim : '#5d6070');
+    g.fillStyle = shine;
+    g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill();
+    g.fillStyle = 'rgba(40,42,56,.35)';
+    for (const [dx, dy, f] of [[0.3, 0.1, 0.22], [-0.25, 0.35, 0.16], [0.05, -0.4, 0.13]]) {
+      g.beginPath(); g.arc(x + dx * r, y + dy * r, r * f, 0, TAU); g.fill();
+    }
+  }
+
   drawBall(g, b, P, across, along) {
     if (b.held > 0) return;
-    const r = R * across(b.y);
+    const S = this.style, r = R * across(b.y);
+    // a comet's or a sun's tail: where it was the last few frames, fading
+    if (S.trail) {
+      b.trail.forEach((p, i) => {
+        if (!i) return;
+        const [tx, ty] = P(p.x, p.y, R + p.z), f = 1 - i / b.trail.length;
+        g.fillStyle = `rgba(${S.trail},${0.35 * f})`;
+        g.beginPath(); g.arc(tx, ty, R * across(p.y) * (0.4 + 0.6 * f), 0, TAU); g.fill();
+      });
+    }
     // shadow on the table (or on the ramp under it), further off the higher it is
     const [sx, sy] = P(b.x + 0.012 + b.z * 0.3, b.y + 0.01, b.ramp !== undefined ? b.z : 0);
     g.fillStyle = 'rgba(0,0,0,.45)';
     g.beginPath(); g.ellipse(sx, sy, r, R * along(b.y), 0, 0, TAU); g.fill();
     const [bx, by] = P(b.x, b.y, R + b.z);
+    if (S.glow) {
+      const halo = g.createRadialGradient(bx, by, r * 0.8, bx, by, r * 2.2);
+      halo.addColorStop(0, 'rgba(255,190,80,.5)');
+      halo.addColorStop(1, 'rgba(255,190,80,0)');
+      g.fillStyle = halo;
+      g.beginPath(); g.arc(bx, by, r * 2.2, 0, TAU); g.fill();
+    }
     const shine = g.createRadialGradient(bx - r * 0.35, by - r * 0.35, r * 0.1, bx, by, r);
-    shine.addColorStop(0, '#ffffff');
-    shine.addColorStop(1, '#8a90ab');
+    shine.addColorStop(0, S.light);
+    shine.addColorStop(1, S.dark);
     g.fillStyle = shine;
     g.beginPath(); g.arc(bx, by, r, 0, TAU); g.fill();
+    if (S.craters) {
+      g.fillStyle = 'rgba(40,42,56,.3)';
+      for (const [dx, dy, f] of [[0.3, 0.15, 0.24], [-0.3, 0.3, 0.17], [0.05, -0.35, 0.14]]) {
+        g.beginPath(); g.arc(bx + dx * r, by + dy * r, r * f, 0, TAU); g.fill();
+      }
+    }
   }
 
-  // The ramp: a see-through track on posts, with glowing rails.
-  drawRamp(g, P, lit, pulse) {
+  // A ramp: a see-through track on posts, with glowing rails.
+  drawRamp(g, P, RAMP, rgb, lit, pulse) {
     const side = (sgn) => RAMP.map((p, i) => {
       const q = RAMP[Math.min(RAMP.length - 1, i + 1)], o = RAMP[Math.max(0, i - 1)];
       const dx = q[0] - o[0], dy = q[1] - o[1], d = Math.hypot(dx, dy) || 1;
       return [p[0] - (dy / d) * RAMP_W * sgn, p[1] + (dx / d) * RAMP_W * sgn, p[2]];
     });
     const L = side(1), Rt = side(-1);
-    g.strokeStyle = 'rgba(79,209,232,.35)';
+    g.strokeStyle = `rgba(${rgb},.35)`;
     g.lineWidth = 1;
     g.beginPath();
     for (let i = 6; i < RAMP.length - 4; i += 9) for (const e of [L[i], Rt[i]]) { g.moveTo(...P(e[0], e[1], e[2])); g.lineTo(...P(e[0], e[1], 0)); }
@@ -730,9 +999,9 @@ export class StarPinball {
     L.forEach((e, i) => (i ? g.lineTo(...P(...e)) : g.moveTo(...P(...e))));
     for (let i = Rt.length - 1; i >= 0; i--) g.lineTo(...P(...Rt[i]));
     g.closePath();
-    g.fillStyle = lit ? 'rgba(79,209,232,.32)' : `rgba(79,209,232,${0.12 + pulse * 0.14})`;
+    g.fillStyle = lit ? `rgba(${rgb},.32)` : `rgba(${rgb},${0.12 + pulse * 0.14})`;
     g.fill();
-    g.strokeStyle = lit ? '#ffffff' : '#4fd1e8';
+    g.strokeStyle = lit ? '#ffffff' : `rgb(${rgb})`;
     g.lineWidth = 1.5;
     for (const rail of [L, Rt]) {
       g.beginPath();
@@ -754,23 +1023,40 @@ export class StarPinball {
     line('SCORE', h * 0.1, h * 0.045, '#8f88b8');
     line(this.score.toLocaleString(), h * 0.2, h * 0.085, '#f4f6ff');
     line(`Ball ${this.ballNo}`, h * 0.31, h * 0.05, '#e8ecff');
-    g.fillStyle = '#9b7bff';
+    g.fillStyle = this.T.theme.edge;
     for (let i = 0; i < Math.max(0, this.left - 1); i++) {
       g.beginPath(); g.arc(x0 + pw * 0.5 + i * h * 0.04, h * 0.295, h * 0.013, 0, TAU); g.fill();
     }
     g.textAlign = 'right';
     g.font = font(h * 0.05);
-    g.fillStyle = this.mult > 1 ? '#4fd1e8' : '#5b5680';
+    g.fillStyle = this.mult > 1 ? this.T.theme.lane[0] : '#5b5680';
     g.fillText(`x${this.mult}`, x1, h * 0.31);
     g.textAlign = 'left';
-    // destination planet
-    const p = this.planet, pr = h * 0.045, py = h * 0.44;
-    g.fillStyle = p.color;
-    g.beginPath(); g.arc(x0 + pr, py, pr, 0, TAU); g.fill();
+    // where the next mission takes you
+    const p = this.planet, pr = h * 0.045, px = x0 + pr, py = h * 0.44;
+    if (p.glow) {
+      const halo = g.createRadialGradient(px, py, pr * 0.3, px, py, pr * 1.3);
+      halo.addColorStop(0, p.color);
+      halo.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = halo;
+      g.beginPath(); g.arc(px, py, pr * 1.3, 0, TAU); g.fill();
+      g.fillStyle = '#ffffff';
+      g.beginPath(); g.arc(px, py, pr * 0.4, 0, TAU); g.fill();
+    } else if (p.galaxy) {
+      const disc = g.createRadialGradient(px, py, 0, px, py, pr * 1.4);
+      disc.addColorStop(0, '#ffffff');
+      disc.addColorStop(0.25, p.color);
+      disc.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = disc;
+      g.beginPath(); g.ellipse(px, py, pr * 1.4, pr * 0.55, -0.4, 0, TAU); g.fill();
+    } else {
+      g.fillStyle = p.color;
+      g.beginPath(); g.arc(px, py, pr, 0, TAU); g.fill();
+    }
     if (p.ring) {
       g.strokeStyle = '#f5e2b0';
       g.lineWidth = 1.5;
-      g.beginPath(); g.ellipse(x0 + pr, py, pr * 1.7, pr * 0.45, -0.3, 0, TAU); g.stroke();
+      g.beginPath(); g.ellipse(px, py, pr * 1.7, pr * 0.45, -0.3, 0, TAU); g.stroke();
     }
     g.textBaseline = 'middle';
     g.font = font(h * 0.05);

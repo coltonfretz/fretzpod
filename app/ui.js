@@ -7,7 +7,7 @@
 import * as api from './api.js';
 import { settings } from './settings.js';
 import { el, fmt, log, logLines, prettyGenre } from './util.js';
-import { StarPinball } from './pinball.js';
+import { StarPinball, PINBALL_TABLES, PINBALL_BALLS, pinballSave, pinballOpen, lockText } from './pinball.js';
 import { SpaceSheep } from './spacesheep.js';
 import * as scores from './scores.js';
 import { streamType } from './player.js';
@@ -892,6 +892,58 @@ export class UI {
     });
   }
 
+  // Star Pinball's title menu (pinball.js). Tables and balls open as the
+  // points from every game add up; Points shows the total so far.
+  pinball() {
+    return new List('Star Pinball', {
+      rows: [
+        { label: 'Start Game', arrow: true, select: (ui) => ui.push(ui.pinballTables()) },
+        { label: 'Balls', arrow: true, select: (ui) => ui.push(ui.pinballBalls()) },
+        { label: 'Exit Game', select: (ui) => ui.back() },
+      ],
+    });
+  }
+
+  pinballTables() {
+    return new List('Tables', {
+      rows: [
+        { label: 'Points', value: () => pinballSave.load().points.toLocaleString() },
+        ...PINBALL_TABLES.map((t, i) => ({
+          label: t.name,
+          value: () => {
+            if (!pinballOpen(t)) return lockText(t);
+            const b = pinballSave.load().best[t.id];
+            return b ? `Best ${b.toLocaleString()}` : '';
+          },
+          select: (ui) => { if (pinballOpen(t)) ui.push(new StarPinball(i, () => ui.wheel.feedback())); },
+        })),
+      ],
+    });
+  }
+
+  // Looks only; picking an open one uses it from the next game.
+  pinballBalls() {
+    return new List('Balls', {
+      rows: [
+        { label: 'Points', value: () => pinballSave.load().points.toLocaleString() },
+        ...PINBALL_BALLS.map((b) => ({
+          label: b.name,
+          value: () => {
+            if (!pinballOpen(b)) return lockText(b);
+            return pinballSave.load().ball === b.id ? '✓' : '';
+          },
+          select: (ui) => {
+            if (!pinballOpen(b)) return;
+            const d = pinballSave.load();
+            d.ball = b.id;
+            pinballSave.save(d);
+            ui.render();
+          },
+        })),
+      ],
+    });
+  }
+
   // Tiki Golf's title menu (golf.js).
   golf() {
     return new List('Tiki Golf', {
@@ -939,7 +991,7 @@ export class UI {
   extras() {
     return new List('Extras', {
       rows: [
-        { label: 'Star Pinball', arrow: true, select: (ui) => ui.push(new StarPinball(() => ui.wheel.feedback())) },
+        { label: 'Star Pinball', arrow: true, select: (ui) => ui.push(ui.pinball()) },
         { label: 'Space Sheep', arrow: true, select: (ui) => ui.push(new SpaceSheep(() => ui.wheel.feedback())) },
         { label: 'Tiki Golf', arrow: true, select: (ui) => ui.push(ui.golf()) },
         { label: 'High Scores', arrow: true, select: (ui) => ui.push(ui.highScores()) },
