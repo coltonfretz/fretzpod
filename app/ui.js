@@ -13,6 +13,7 @@ import { Fishing, FISH_SPOTS, FISH_LURES, FISH_KINDS, fishSave, fishOpen, fishLo
 import * as scores from './scores.js';
 import { streamType } from './player.js';
 import { listSpeakers } from './speakers.js';
+import { HOLD_MS, HOLD_REPEAT_MS } from './wheel.js';
 import { Tv, tvData } from './tv.js';
 import { Golf, SHOP, golfSave, shopPick, courseOpen } from './golf.js';
 import { COURSES } from './golf-holes.js';
@@ -112,13 +113,25 @@ class List {
     this.rows[this.sel]?.select?.(ui, this.sel);
   }
 
+  // A row with a step (Settings rows) takes ⏮/⏭; otherwise they're the
+  // music's previous and next as usual.
+  prev() { return this.step(-1); }
+  next() { return this.step(1); }
+  step(dir) {
+    const r = this.rows[this.sel];
+    if (!r?.step) return false;
+    r.step(dir);
+    return true;
+  }
+
   render(view) {
     view.replaceChildren();
     view.classList.toggle('split', this.split);
     const list = el('div', 'list');
     if (this.visible !== ROWS) list.style.gridTemplateRows = `repeat(${this.visible}, 1fr)`;
     if (this.total === null || (this.error && !this.length)) {
-      list.append(el('div', 'note', this.error ? `Couldn't load: ${this.error}` : 'Loading…'));
+      // The why (a status code) is in Settings > About > Log; need() logs it.
+      list.append(el('div', 'note', this.error ? "Couldn't load. Try again later." : 'Loading…'));
     } else if (!this.length) {
       list.append(el('div', 'note', this.empty));
     }
@@ -748,15 +761,31 @@ export class UI {
 
   // Raw buttons (wheel.js), for a game that needs each press and release as
   // it happens (Star Pinball's flippers and plunger). MENU and play still
-  // act on the touch, like a press.
+  // act on the touch, like a press. The wheel doesn't time holds in raw
+  // mode, so MENU's hold (the games' pause menu, pause.js) is timed here
+  // the same way: from HOLD_MS, repeating every HOLD_REPEAT_MS.
   raw() { return this.top?.rawButtons === true; }
 
   down(button) {
-    if (button === 'menu' || button === 'play') { this.press(button); return; }
+    if (button === 'menu') {
+      this.press(button);
+      this.endRawMenu();
+      this.rawMenu = setTimeout(() => {
+        this.hold('menu');
+        this.rawMenu = setInterval(() => this.hold('menu'), HOLD_REPEAT_MS);
+      }, HOLD_MS);
+      return;
+    }
+    if (button === 'play') { this.press(button); return; }
     this.top?.down?.(button);
   }
 
-  up(button) { this.top?.up?.(button); }
+  up(button) {
+    if (button === 'menu') { this.endRawMenu(); return; }
+    this.top?.up?.(button);
+  }
+
+  endRawMenu() { clearTimeout(this.rawMenu); clearInterval(this.rawMenu); this.rawMenu = null; }
 
   // Returns true when a screen took a center hold (the wheel then doesn't
   // count the release as a press).
@@ -767,11 +796,11 @@ export class UI {
       this.render();
       return true;
     }
-    // Holding MENU leaves a screen that ignores stray MENU taps (Fishing
-    // Trip mid-cast and mid-fight, where thumbs tap the ring a lot). The
-    // hold repeats while the thumb stays down; the screen's holdMenu says
-    // when it's been held long enough. After leaving, the repeats land on
-    // the screen below, which has no holdMenu, so it leaves only once.
+    // Holding MENU in a game opens its pause menu (pause.js); the game does
+    // that itself and returns false. holdMenu returns true only where a tap
+    // would leave anyway (end screens). The hold repeats while the thumb
+    // stays down; after leaving, the repeats land on the screen below,
+    // which has no holdMenu, so it leaves only once.
     if (button === 'menu') {
       if (top?.holdMenu?.()) { this.wheel.feedback(true); this.leaveTop(); }
       else this.render();
@@ -925,7 +954,7 @@ export class UI {
   }
 
   // Star Pinball's title menu (pinball.js). Tables and balls open as the
-  // points from every game add up; Points shows the total so far.
+  // points from every game add up; Total points shows the total so far.
   pinball() {
     return new List('Star Pinball', {
       rows: [
@@ -940,7 +969,7 @@ export class UI {
   pinballTables() {
     return new List('Tables', {
       rows: [
-        { label: 'Points', value: () => pinballSave.load().points.toLocaleString() },
+        { label: 'Total points', value: () => pinballSave.load().points.toLocaleString() },
         ...PINBALL_TABLES.map((t, i) => ({
           label: t.name,
           value: () => {
@@ -958,7 +987,7 @@ export class UI {
   pinballBalls() {
     return new List('Balls', {
       rows: [
-        { label: 'Points', value: () => pinballSave.load().points.toLocaleString() },
+        { label: 'Total points', value: () => pinballSave.load().points.toLocaleString() },
         ...PINBALL_BALLS.map((b) => ({
           label: b.name,
           value: () => {
@@ -994,7 +1023,7 @@ export class UI {
   fishingSpots() {
     return new List('Spots', {
       rows: [
-        { label: 'Points', value: () => fishSave.load().points.toLocaleString() },
+        { label: 'Total points', value: () => fishSave.load().points.toLocaleString() },
         ...FISH_SPOTS.map((s, i) => ({
           label: s.name,
           value: () => {
@@ -1002,7 +1031,7 @@ export class UI {
             const log = fishSave.load().log, kinds = FISH_KINDS.filter((f) => f.spot === s.id);
             return `${kinds.filter((f) => log[f.id]).length} / ${kinds.length}`;
           },
-          select: (ui) => { if (fishOpen(s)) ui.push(new Fishing(i, () => ui.wheel.feedback())); },
+          select: (ui) => { if (fishOpen(s)) ui.push(new Fishing(i, () => ui.wheel.feedback(), () => ui.wheel.bite())); },
         })),
       ],
     });
@@ -1012,7 +1041,7 @@ export class UI {
   fishingLures() {
     return new List('Lures', {
       rows: [
-        { label: 'Points', value: () => fishSave.load().points.toLocaleString() },
+        { label: 'Total points', value: () => fishSave.load().points.toLocaleString() },
         ...FISH_LURES.map((l) => ({
           label: l.name,
           value: () => (!fishOpen(l) ? fishLockText(l) : fishSave.load().lure === l.id ? '✓' : ''),
@@ -1257,6 +1286,9 @@ export class UI {
       label: settings.defs[k].label,
       value: () => settings.name(k),
       select: () => { settings.cycle(k); window.dispatchEvent(new CustomEvent('fp-setting', { detail: k })); },
+      // ⏮/⏭ step back or on through the values, wrapping round (Colton,
+      // 2026-11-08: with up to nine bodies, one way round was a long trip).
+      step: (dir) => { settings.cycle(k, dir); window.dispatchEvent(new CustomEvent('fp-setting', { detail: k })); },
     });
     const rows = [opt('shuffle'), opt('repeat'), opt('quality'), opt('clicker')];
     // Firefox on Android ignores web vibration (and Safari has none), so say

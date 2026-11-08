@@ -20,12 +20,13 @@
 //   faster for harder fish. Too high for too long snaps the line,
 //   too slack lets the fish throw the hook. Tapping center during a run
 //   jerks the rod and breaks the fish's pull.
-// - MENU: while the lure is out or a fish is on, the thumb taps the ring a
-//   lot to keep the tension right, and a light tap at the top counts as
-//   MENU (Colton, 2026-11-08: it kept dropping him out mid-fight). So then a
-//   tap only says "Hold MENU to leave", and holding it leaves. Aiming, or
-//   on a catch card, MENU leaves as everywhere else.
-// - Play/pause does nothing (a stray press shouldn't stop the music either).
+// - MENU: the thumb taps the ring a lot to keep the tension right, and a
+//   light tap at the top counts as MENU (Colton, 2026-11-08: it kept
+//   dropping him out mid-fight). So a tap only says "Hold MENU to pause",
+//   and holding it opens the pause menu (pause.js, the same in all three
+//   games), which is where you leave from.
+// - Play/pause does nothing: the reel spins right past it, and a stray
+//   press shouldn't stop the music either.
 //
 // Collecting: every kind caught goes in the Fish Log (biggest and how many).
 // Points from every catch add up on the phone; they open two more spots and
@@ -36,6 +37,7 @@
 import * as scores from './scores.js';
 import { canvasFont as font, runCanvas, store } from './util.js';
 import { newBodies } from './bodies.js';
+import { Pause } from './pause.js';
 
 const ID = 'fish';                  // the score board's name for it
 const TAU = Math.PI * 2;
@@ -149,10 +151,11 @@ export const fishLockText = (thing) => `Locked · ${thing.need.toLocaleString()}
 // ---------- the game ----------
 
 export class Fishing {
-  constructor(spotIndex, feedback) {
+  constructor(spotIndex, feedback, biteCue = () => {}) {
     this.spot = SPOTS[spotIndex];
     this.title = this.spot.name;
     this.feedback = feedback;       // click + buzz, as on the wheel
+    this.biteCue = biteCue;         // its own buzz and a drop sound (wheel.js bite)
     this.canvas = null;             // runCanvas's (util.js), with raf
     this.raf = 0;
     const pick = fishSave.load().lure;
@@ -169,7 +172,7 @@ export class Fishing {
     this.rotateAt = 30;             // every so often one fish leaves and another comes
     this.ripples = [];
     this.reels = [];                // when the lure was last reeled, for "too fast"
-    this.menuHint = 0;              // until when "Hold MENU to leave" shows
+    this.pause = new Pause('Quit game');
     this.note = null;               // {text, until}: Too early, Too late, Too fast
     this.deco = this.makeDeco();
     this.toAim();
@@ -224,6 +227,7 @@ export class Fishing {
   // ---------- wheel ----------
 
   turn(dir) {
+    if (this.pause.open) return this.pause.turn(dir);
     if (this.state === 'aim') {
       this.aim = clamp(this.aim + dir * AIM_STEP, -AIM_MAX, AIM_MAX);
     } else if (this.state === 'lure' && dir > 0) {
@@ -241,6 +245,11 @@ export class Fishing {
   }
 
   select() {
+    if (this.pause.open) {
+      if (this.pause.quitting()) this.ui.leaveTop();
+      else this.pause.hide();
+      return;
+    }
     if (this.state === 'aim') { this.state = 'power'; this.power = 0; this.powerDir = 1; return; }
     if (this.state === 'power') { this.cast(); return; }
     if (this.state === 'lure') {
@@ -256,30 +265,28 @@ export class Fishing {
     if (this.state === 'card') this.toAim();
   }
 
-  // A MENU tap (ui.js back): leaves as usual when nothing's at stake, else
-  // ignored with a reminder. holdMenu: holding MENU always leaves.
+  // MENU (pause.js): a tap shows "Hold MENU to pause" (or resumes, paused),
+  // a hold opens the pause menu. Neither leaves by itself.
   back() {
-    if (this.state === 'aim' || this.state === 'card') return false;
-    this.menuHint = this.t + 1.5;
+    if (this.pause.open) this.pause.hide();
+    else this.pause.tap();
     return true;
   }
 
-  // Called as MENU is held (from 0.45 s, then every 0.18 s). Leaves after
-  // about a second, so a thumb resting at the top of the ring mid-fight
-  // doesn't count. Wall-clock time: repeats more than 0.3 s apart are a new hold.
   holdMenu() {
-    const now = Date.now();
-    if (!this.menuHold || now - this.menuHold.last > 300) this.menuHold = { start: now, last: now };
-    this.menuHold.last = now;
-    this.menuHint = this.t + 0.6;
-    return now - this.menuHold.start >= 550;
+    if (this.pause.hold()) this.pause.show();
+    return false;
   }
 
   prev() { this.steer(-1); return true; }
   next() { this.steer(1); return true; }
   play() { return true; }
+  // Holding previous/next keeps steering. Without this, a held ⏮/⏭ fell
+  // through to ui.js and opened Now Playing over the game.
+  hold(button) { if (button === 'prev' || button === 'next') this.steer(button === 'prev' ? -1 : 1); }
 
   steer(dir) {
+    if (this.pause.open) return;
     if (this.state === 'aim') { this.aim = clamp(this.aim + dir * AIM_STEP * 4, -AIM_MAX, AIM_MAX); return; }
     if (this.state !== 'lure') return;
     this.lureAt.x = clamp(this.lureAt.x + dir * STEER, 0.03, 0.97);
@@ -441,6 +448,7 @@ export class Fishing {
   // ---------- loop ----------
 
   step(dt) {
+    if (this.pause.open) return;    // everything waits, fish and fight too
     this.t += dt;
     if (this.state === 'power') {
       this.power += (this.powerDir * dt) / POWER_TIME;
@@ -533,8 +541,9 @@ export class Fishing {
       if ((f.timer -= dt) <= 0) {
         f.state = 'bite';
         f.timer = 0.95 - 0.25 * f.kind.wild;   // a press counts when the thumb lifts, so not too tight
+        f.biteAt = this.t;
         this.ripple(L.x, L.y, 0.9);
-        this.feedback();
+        this.biteCue();
       }
       return;
     }
@@ -593,13 +602,7 @@ export class Fishing {
     }
     // a "!" over a biting fish
     const biter = this.fish.find((f) => f.state === 'bite');
-    if (biter && this.state === 'lure') {
-      g.font = font(h * 0.08, 800);
-      g.textAlign = 'center';
-      g.textBaseline = 'bottom';
-      g.fillStyle = '#ffd84a';
-      g.fillText('!', X(this.lureAt.x), Y(this.lureAt.y) - h * 0.03);
-    }
+    if (biter && this.state === 'lure') this.drawBang(g, X(this.lureAt.x), Y(this.lureAt.y) - h * 0.03, h, this.t - (biter.biteAt ?? this.t));
     // Too early / Too late / Too fast, over where the lure is
     if (this.note && this.note.until > this.t && this.lureAt) {
       g.font = font(h * 0.05, 700);
@@ -614,16 +617,36 @@ export class Fishing {
     if (this.state === 'fight') this.drawFight(g, w, h);
     this.drawHud(g, w, h);
     if (this.state === 'card') this.drawCard(g, w, h);
-    if (this.menuHint > this.t) {
-      g.font = font(h * 0.05, 700);
-      g.textAlign = 'center';
-      g.textBaseline = 'middle';
-      const text = 'Hold MENU to leave', tw = g.measureText(text).width;
-      g.fillStyle = 'rgba(5,10,20,.8)';
-      g.fillRect(w / 2 - tw / 2 - 10, h * 0.13, tw + 20, h * 0.08);
-      g.fillStyle = '#f4f6ff';
-      g.fillText(text, w / 2, h * 0.17);
+    this.pause.drawHint(g, w, h);
+    this.pause.draw(g, w, h);
+  }
+
+  // The bite's "!" (Colton, 2026-11-08: the size is right, but it blended
+  // into the water). Same size, now gold with a dark outline so it reads on
+  // any water, popping in a little big with a quick flash ring behind it.
+  drawBang(g, x, y, h, age) {
+    const pop = 1 + 0.4 * Math.max(0, 1 - age / 0.14);
+    if (age < 0.3) {
+      g.strokeStyle = `rgba(255,250,220,${(1 - age / 0.3) * 0.9})`;
+      g.lineWidth = Math.max(1.5, h * 0.008);
+      g.beginPath(); g.arc(x, y - h * 0.035, h * (0.03 + age * 0.14), 0, TAU); g.stroke();
     }
+    g.save();
+    g.translate(x, y);
+    g.scale(pop, pop);
+    g.font = font(h * 0.08, 900);
+    g.textAlign = 'center';
+    g.textBaseline = 'bottom';
+    g.lineJoin = 'round';
+    g.lineWidth = Math.max(2, h * 0.014);
+    g.strokeStyle = '#2a1600';
+    g.strokeText('!', 0, 0);
+    const grad = g.createLinearGradient(0, -h * 0.07, 0, 0);
+    grad.addColorStop(0, '#fff3a0');
+    grad.addColorStop(1, '#ffb21e');
+    g.fillStyle = grad;
+    g.fillText('!', 0, 0);
+    g.restore();
   }
 
   drawScene(g, w, h, X, Y, U) {

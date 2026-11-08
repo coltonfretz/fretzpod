@@ -8,7 +8,11 @@
 // two thumbs. That needs the wheel's raw mode (rawButtons below, wheel.js),
 // because a normal press only counts when the thumb lifts. Hold center to
 // pull the plunger back, let go to launch: the longer the pull, the harder
-// the shot. Play/pause pauses, MENU leaves.
+// the shot. Play/pause, or MENU held, opens the pause menu (pause.js, the
+// same in all three games); a MENU tap mid-game only says to hold it
+// (Colton, 2026-11-08: a thumb slipping up off a flipper quit the game).
+// While paused the wheel works normally (not raw), so it can pick Resume or
+// Quit game.
 //
 // The table is drawn in perspective, looking up it from behind the
 // flippers: the far end is narrower and the ball gets smaller as it rolls
@@ -33,6 +37,7 @@
 // y down; z is height above the table. The physics is flat (x, y); only the
 // ramps and the drawing use z.
 import * as scores from './scores.js';
+import { Pause } from './pause.js';
 import { canvasFont as font, runCanvas, store } from './util.js';
 import { newBodies } from './bodies.js';
 
@@ -353,7 +358,7 @@ export class StarPinball {
   constructor(tableIndex, feedback) {
     this.T = table(tableIndex);
     this.title = this.T.name;
-    this.rawButtons = true;         // flippers need press and release as they happen (wheel.js)
+    this.pause = new Pause('Quit game');
     this.feedback = feedback;       // click + buzz, as on the wheel
     this.canvas = null;             // runCanvas's (util.js), with raf
     this.raf = 0;
@@ -411,10 +416,15 @@ export class StarPinball {
 
   attach(ui) { this.ui = ui; }
 
+  // Flippers need press and release as they happen (wheel.js raw mode), but
+  // the pause menu needs the wheel to turn and click like a list.
+  get rawButtons() { return !this.pause.open; }
+
   leave() {
     // Leaving throws the game away, so a game in progress counts as ended.
     if (this.score > 0) this.finish();
     if (this.state === 'play') this.state = 'paused';
+    this.pause.hide();
     this.release();
   }
 
@@ -443,7 +453,7 @@ export class StarPinball {
   down(button) {
     if (button === 'select') {
       if (this.state === 'over') { this.newGame(); return; }
-      if (this.state === 'paused') { this.state = 'play'; return; }
+      if (this.state === 'paused') { this.resume(); return; }
       if (this.balls.some((b) => b.plunger)) { this.pulling = true; this.pull = 0; }
       return;
     }
@@ -465,11 +475,48 @@ export class StarPinball {
   }
 
   play() {
-    if (this.state === 'play') { this.state = 'paused'; this.release(); } else if (this.state === 'paused') this.state = 'play';
+    if (this.state === 'play') this.openPause(); else if (this.state === 'paused') this.resume();
     return true;
   }
 
-  turn() { return false; }
+  openPause() {
+    if (this.state !== 'play') return;
+    this.state = 'paused';
+    this.release();
+    this.pause.show();
+  }
+
+  resume() { this.pause.hide(); this.state = 'play'; }
+
+  // MENU (pause.js): Game Over leaves on a tap; mid-game a tap only shows
+  // "Hold MENU to pause" (or resumes, paused), and a hold opens the menu.
+  back() {
+    if (this.state === 'over') return false;
+    if (this.state === 'paused') this.resume();
+    else this.pause.tap();
+    return true;
+  }
+
+  holdMenu() {
+    if (this.state === 'over') return true;
+    if (this.pause.hold()) this.openPause();
+    return false;
+  }
+
+  // The pause menu, with the wheel out of raw mode.
+  turn(dir) { return this.pause.open ? this.pause.turn(dir) : false; }
+
+  select() {
+    if (!this.pause.open) return;
+    if (this.pause.quitting()) this.ui.leaveTop();
+    else this.resume();
+  }
+
+  // Keep the buttons in the game while paused: unclaimed, ⏮/⏭ would skip
+  // the song and a hold would open Now Playing.
+  prev() { return true; }
+  next() { return true; }
+  hold() {}
 
   launch() {
     const b = this.balls.find((q) => q.plunger);
@@ -902,7 +949,9 @@ export class StarPinball {
       const lines = scores.overLines(this.score, this.best, this.result);
       lines.splice(lines.length - 1, 0, ...this.unlocked);
       scores.drawBox(g, lines, w / 2, h * 0.5, h);
-    } else if (this.state === 'paused') scores.drawBox(g, ['Paused'], cx, h * 0.5, h);
+    }
+    this.pause.drawHint(g, w, h);
+    this.pause.draw(g, w, h);
   }
 
   // The walls in drawing order, far end of the table first, so a near

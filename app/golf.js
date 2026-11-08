@@ -8,7 +8,9 @@
 //
 // Wheel: turn swings the aim (faster spins swing faster), previous/next nudge
 // it a hair, center locks the aim, then center again stops the power meter.
-// MENU (or play/pause) pauses; the pause menu can quit the round.
+// Play/pause, or MENU held, opens the pause menu (pause.js, the same in all
+// three games), which can quit the round. A MENU tap mid-round only says to
+// hold it; on the scorecard it leaves.
 //
 // Physics runs in fixed 1/240 s steps in a 400 x 300 world (golf-holes.js),
 // and the course is drawn once per hole into an offscreen canvas; each frame
@@ -16,6 +18,7 @@
 import { COURSES, coursePar } from './golf-holes.js';
 import { store, canvasFont as font, runCanvas } from './util.js';
 import { newBodies } from './bodies.js';
+import { Pause } from './pause.js';
 
 const W = 400;
 const H = 300;
@@ -160,7 +163,7 @@ export class Golf {
     this.raf = 0;
     this.time = 0;
     this.aimTicks = [];
-    this.pauseSel = 0;
+    this.pause = new Pause('Quit round');
     this.quitting = false;
     this.startHole(0);
   }
@@ -240,11 +243,7 @@ export class Golf {
   // ---------- wheel ----------
 
   turn(dir) {
-    if (this.state === 'paused') {
-      const before = this.pauseSel;
-      this.pauseSel = Math.max(0, Math.min(1, this.pauseSel + dir));
-      return this.pauseSel !== before;
-    }
+    if (this.state === 'paused') return this.pause.turn(dir);
     if (this.state !== 'aim') return false;
     // Faster spins swing the arrow further per tick.
     const now = performance.now();
@@ -264,25 +263,38 @@ export class Golf {
 
   togglePause() {
     if (this.state === 'card') return;
-    if (this.state === 'paused') { this.setState(this.resumeTo); this.stateT = this.resumeT; return; }
+    if (this.state === 'paused') {
+      this.pause.hide();
+      this.setState(this.resumeTo);
+      this.stateT = this.resumeT;
+      return;
+    }
     this.resumeTo = this.state;
     this.resumeT = this.stateT;
-    this.pauseSel = 0;
+    this.pause.show();
     this.setState('paused');
   }
 
-  // MENU pauses; MENU again resumes. Quit is in the pause menu.
+  // MENU (pause.js): the scorecard leaves on a tap; mid-round a tap only
+  // shows "Hold MENU to pause" (or resumes, paused), and a hold pauses.
   back() {
     if (this.quitting || this.state === 'card') return false;
-    this.togglePause();
+    if (this.state === 'paused') this.togglePause();
+    else this.pause.tap();
     return true;
+  }
+
+  holdMenu() {
+    if (this.quitting || this.state === 'card') return true;
+    if (this.state !== 'paused' && this.pause.hold()) this.togglePause();
+    return false;
   }
 
   select() {
     switch (this.state) {
       case 'paused':
-        if (this.pauseSel === 0) this.togglePause();
-        else { this.quitting = true; this.ui.back(); }
+        if (this.pause.quitting()) { this.quitting = true; this.ui.leaveTop(); }
+        else this.togglePause();
         break;
       case 'intro': this.banner = null; this.setState('aim'); break;
       case 'aim': this.setState('power'); break;
@@ -1326,7 +1338,8 @@ export class Golf {
       g.fillRect(x - 4, bot - fill - 1, bw + 8, 2);
     }
     if (this.banner) this.drawBanner(g, w, h);
-    if (this.state === 'paused') this.drawPause(g, w, h);
+    this.pause.drawHint(g, w, h);
+    this.pause.draw(g, w, h);
   }
 
   drawBanner(g, w, h) {
@@ -1350,34 +1363,6 @@ export class Golf {
       g.fillStyle = '#6b5124';
       g.fillText(sub, w / 2, y + bh * 0.72);
     }
-  }
-
-  drawPause(g, w, h) {
-    g.fillStyle = 'rgba(0,0,0,0.55)';
-    g.fillRect(0, 0, w, h);
-    const bw = w * 0.6, rh = h * 0.12;
-    const x = (w - bw) / 2, y = h * 0.28;
-    g.fillStyle = '#ffffff';
-    roundRect(g, x, y, bw, rh * 3, h * 0.02);
-    g.fill();
-    g.textAlign = 'center';
-    g.textBaseline = 'middle';
-    g.fillStyle = '#222';
-    g.font = font(h * 0.065);
-    g.fillText('Paused', w / 2, y + rh / 2);
-    ['Resume', 'Quit round'].forEach((label, i) => {
-      const ry = y + rh * (i + 1);
-      if (this.pauseSel === i) {
-        const grad = g.createLinearGradient(0, ry, 0, ry + rh);
-        grad.addColorStop(0, '#5aa2f0');
-        grad.addColorStop(1, '#2a6fd0');
-        g.fillStyle = grad;
-        g.fillRect(x, ry, bw, rh);
-      }
-      g.fillStyle = this.pauseSel === i ? '#ffffff' : '#222';
-      g.font = font(h * 0.058, 600);
-      g.fillText(label, w / 2, ry + rh / 2);
-    });
   }
 
   drawCard(g, w, h, dpr) {

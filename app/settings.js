@@ -38,9 +38,10 @@ export const settings = {
     return DEFS[k].values.includes(v) && (DEFS[k].open?.(v) ?? true) ? v : DEFS[k].def;
   },
   set(k, v) { store.set('fp.set.' + k, v); },
-  cycle(k) {
+  // dir 1 is on to the next value, -1 back; either way it wraps round.
+  cycle(k, dir = 1) {
     const vals = DEFS[k].values.filter((v) => DEFS[k].open?.(v) ?? true);
-    const v = vals[(vals.indexOf(this.get(k)) + 1) % vals.length];
+    const v = vals[(vals.indexOf(this.get(k)) + dir + vals.length) % vals.length];
     this.set(k, v);
     return v;
   },

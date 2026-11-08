@@ -19,8 +19,8 @@ import { log } from './util.js';
 
 const TICK = (2 * Math.PI) / 24;
 const TAP_SLOP = 0.18;     // radians (~10°) of turning before a touch stops being a press
-const HOLD_MS = 450;       // press-and-hold threshold (fast-forward / rewind)
-const HOLD_REPEAT_MS = 180;
+export const HOLD_MS = 450;       // press-and-hold threshold (fast-forward / rewind)
+export const HOLD_REPEAT_MS = 180;
 const SCROLL_PX = 50;      // scroll distance per wheel step: about 2 per mouse notch, smooth on trackpads
 
 // Keyboard layout, iPod-style: arrows up/down turn, left/right are previous/
@@ -253,6 +253,28 @@ export class Wheel {
     this.clickBuf = this.audio.createBuffer(1, n, this.audio.sampleRate);
     const d = this.clickBuf.getChannelData(0);
     for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 3) * 0.5;
+  }
+
+  // Fishing Trip's bite (Colton, 2026-11-08): the playtest found the bite
+  // buzzed the same 8 ms as every reel tick, so mid-reel it got lost. Now a
+  // double pulse, and a water drop sound with the Clicker on. The drop is a
+  // sine sweeping up fast and dying away, made here so there's no sound file.
+  bite() {
+    const level = this.prefs.haptics();
+    if (level !== 'off' && navigator.vibrate) navigator.vibrate(level === 'strong' ? [35, 70, 35] : [14, 70, 14]);
+    if (!this.prefs.clicker() || !this.audio) return;
+    const a = this.audio, t = a.currentTime;
+    if (a.state === 'suspended') a.resume();
+    const osc = a.createOscillator(), gain = a.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(420, t);
+    osc.frequency.exponentialRampToValueAtTime(1500, t + 0.07);
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(0.35, t + 0.008);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+    osc.connect(gain).connect(a.destination);
+    osc.start(t);
+    osc.stop(t + 0.18);
   }
 
   // Called by the UI when something actually moved (so the ends of a list are

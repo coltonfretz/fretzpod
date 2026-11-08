@@ -102,14 +102,15 @@ export function gameOver(game, id) {
 
 // The Game Over box: the score, then where it put you.
 export function overLines(score, localBest, result) {
-  const lines = [`Game over  ·  ${score}`];
+  const n = (x) => Number(x).toLocaleString();   // 48,250 like the menus
+  const lines = [`Game over  ·  ${n(score)}`];
   if (result?.you) {
     const { rank, score: best } = result.you;
     const who = result.me?.name ? ` as ${result.me.name}` : '';
     if (result.newBest) lines.push(`New best! #${rank} of ${result.players}${who}`);
-    else lines.push(`Your best ${best}, #${rank} of ${result.players}${who}`);
+    else lines.push(`Your best ${n(best)}, #${rank} of ${result.players}${who}`);
   } else {
-    lines.push(score >= localBest && score > 0 ? 'New best!' : `Best ${localBest}`);
+    lines.push(score >= localBest && score > 0 ? 'New best!' : `Best ${n(localBest)}`);
   }
   lines.push('Center to play again');
   return lines;
