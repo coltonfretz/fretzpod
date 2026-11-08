@@ -651,6 +651,11 @@ export class UI {
   back() {
     const top = this.top;
     if (top?.back?.()) { this.render(); return; }
+    this.leaveTop();
+  }
+
+  // Off the top screen, whatever it would rather do with MENU.
+  leaveTop() {
     if (this.stack.length < 2) return;
     const s = this.stack.pop();
     s.leave?.();
@@ -760,6 +765,16 @@ export class UI {
       if (!top?.holdSelect?.()) return false;
       this.render();
       return true;
+    }
+    // Holding MENU leaves a screen that ignores stray MENU taps (Fishing
+    // Trip mid-cast and mid-fight, where thumbs tap the ring a lot). The
+    // hold repeats while the thumb stays down; the screen's holdMenu says
+    // when it's been held long enough. After leaving, the repeats land on
+    // the screen below, which has no holdMenu, so it leaves only once.
+    if (button === 'menu') {
+      if (top?.holdMenu?.()) { this.wheel.feedback(true); this.leaveTop(); }
+      else this.render();
+      return;
     }
     if (button !== 'next' && button !== 'prev') return;
     // Holding next/previous scrubs the song on Now Playing, opening it from

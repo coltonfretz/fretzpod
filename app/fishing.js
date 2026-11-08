@@ -20,8 +20,12 @@
 //   faster for harder fish. Too high for too long snaps the line,
 //   too slack lets the fish throw the hook. Tapping center during a run
 //   jerks the rod and breaks the fish's pull.
-// - MENU leaves. Play/pause does nothing (a stray press shouldn't stop the
-//   music either).
+// - MENU: while the lure is out or a fish is on, the thumb taps the ring a
+//   lot to keep the tension right, and a light tap at the top counts as
+//   MENU (Colton, 2026-11-08: it kept dropping him out mid-fight). So then a
+//   tap only says "Hold MENU to leave", and holding it leaves. Aiming, or
+//   on a catch card, MENU leaves as everywhere else.
+// - Play/pause does nothing (a stray press shouldn't stop the music either).
 //
 // Collecting: every kind caught goes in the Fish Log (biggest and how many).
 // Points from every catch add up on the phone; they open two more spots and
@@ -164,6 +168,7 @@ export class Fishing {
     this.rotateAt = 30;             // every so often one fish leaves and another comes
     this.ripples = [];
     this.reels = [];                // when the lure was last reeled, for "too fast"
+    this.menuHint = 0;              // until when "Hold MENU to leave" shows
     this.note = null;               // {text, until}: Too early, Too late, Too fast
     this.deco = this.makeDeco();
     this.toAim();
@@ -248,6 +253,25 @@ export class Fishing {
     }
     if (this.state === 'fight') { this.jerk(); return; }
     if (this.state === 'card') this.toAim();
+  }
+
+  // A MENU tap (ui.js back): leaves as usual when nothing's at stake, else
+  // ignored with a reminder. holdMenu: holding MENU always leaves.
+  back() {
+    if (this.state === 'aim' || this.state === 'card') return false;
+    this.menuHint = this.t + 1.5;
+    return true;
+  }
+
+  // Called as MENU is held (from 0.45 s, then every 0.18 s). Leaves after
+  // about a second, so a thumb resting at the top of the ring mid-fight
+  // doesn't count. Wall-clock time: repeats more than 0.3 s apart are a new hold.
+  holdMenu() {
+    const now = Date.now();
+    if (!this.menuHold || now - this.menuHold.last > 300) this.menuHold = { start: now, last: now };
+    this.menuHold.last = now;
+    this.menuHint = this.t + 0.6;
+    return now - this.menuHold.start >= 550;
   }
 
   prev() { this.steer(-1); return true; }
@@ -588,6 +612,16 @@ export class Fishing {
     if (this.state === 'fight') this.drawFight(g, w, h);
     this.drawHud(g, w, h);
     if (this.state === 'card') this.drawCard(g, w, h);
+    if (this.menuHint > this.t) {
+      g.font = font(h * 0.05, 700);
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      const text = 'Hold MENU to leave', tw = g.measureText(text).width;
+      g.fillStyle = 'rgba(5,10,20,.8)';
+      g.fillRect(w / 2 - tw / 2 - 10, h * 0.13, tw + 20, h * 0.08);
+      g.fillStyle = '#f4f6ff';
+      g.fillText(text, w / 2, h * 0.17);
+    }
   }
 
   drawScene(g, w, h, X, Y, U) {
