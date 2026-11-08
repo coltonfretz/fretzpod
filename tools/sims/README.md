@@ -27,10 +27,13 @@ folder; nothing here is served to phones.
   bite after a human reaction time, fights by spinning to keep the tension
   marker in the green at a thumb's speed). `SPOT=0|1|2`,
   `LURE=worm|spinner|frog|jig`, `SKILL=0.5` for a slower, sloppier player,
-  `SPAM=1` for one who just spins forward through every fight. On
+  `SPAM=1` for one who just spins forward through every fight, `FAST=1`
+  for one who reels the lure in fast (should get no bites). On
   2026-11-08: the careful bot lands 2 to 3 fish a minute and loses none,
   SKILL=0.5 about 2 a minute and loses the odd one to slack, SPAM=1 snaps
-  the line every time. Fights average 12 to 25 s. Points a minute (about
+  the line every time. With the drifting green (0.16.1) SKILL=0.5 loses
+  about a third of river and sea fish; FAST=1 gets no bites. Fights
+  average 12 to 25 s. Points a minute (about
   150 to 300 at the pond and river, 450 to 800 at the sea) are what the
   unlock points are set against. Rerun after changing the fight, the fish
   or the unlock points in `fishing.js`.

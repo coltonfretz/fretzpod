@@ -12,10 +12,12 @@
 //   moving lure is what draws fish. Previous and next steer it sideways.
 //   Center twitches it. A fish that likes the lure comes over and nibbles;
 //   the phone buzzes when it bites, and center then hooks it. Center during
-//   the nibble scares it off.
+//   the nibble is too early and scares it off; miss the bite and it's too
+//   late. Reeling fast spooks fish: a slow, steady reel draws them in.
 // - The fight: a tension bar. Turning forward reels (tension up), turning
 //   back gives line (tension down). Keep the marker in the green while the
-//   fish tires and the line comes in. Too high for too long snaps the line,
+//   fish tires and the line comes in. The green drifts about, more and
+//   faster for harder fish. Too high for too long snaps the line,
 //   too slack lets the fish throw the hook. Tapping center during a run
 //   jerks the rod and breaks the fish's pull.
 // - MENU leaves. Play/pause does nothing (a stray press shouldn't stop the
@@ -44,6 +46,11 @@ const REEL_STEP = 0.012;            // how far one tick reels the lure in
 const STEER = 0.035;                // how far previous/next move it sideways
 const SIGHT = 0.24;                 // how far a fish notices a moving lure
 const MOVED = 1.6;                  // seconds a lure counts as moving after it last moved
+// Reeling FAST_TICKS ticks (a quarter turn) within FAST_WINDOW seconds is
+// too fast and spooks fish. Thumbs turn in flicks, so a short flick alone
+// doesn't count; a steady reel is about 2 to 4 ticks a second.
+const FAST_WINDOW = 1;
+const FAST_TICKS = 6;
 const LINE_M = 40;                  // meters of line per unit, for the readout
 
 // The fight's tension bar (0 slack .. 1 breaking).
@@ -156,6 +163,8 @@ export class Fishing {
     this.respawns = [];             // times a replacement fish swims in
     this.rotateAt = 30;             // every so often one fish leaves and another comes
     this.ripples = [];
+    this.reels = [];                // when the lure was last reeled, for "too fast"
+    this.note = null;               // {text, until}: Too early, Too late, Too fast
     this.deco = this.makeDeco();
     this.toAim();
   }
@@ -217,6 +226,7 @@ export class Fishing {
       L.x += (dx / d) * REEL_STEP;
       L.y += (dy / d) * REEL_STEP;
       this.moved();
+      this.reels.push(this.t);
     } else if (this.state === 'fight') {
       const F = this.fight;
       F.effort = clamp(F.effort + (dir > 0 ? REEL_KICK : -GIVE_KICK), -1, 1);
@@ -231,7 +241,7 @@ export class Fishing {
       const f = this.fish.find((q) => q.state === 'bite');
       if (f) { this.hook(f); return; }
       const nib = this.fish.find((q) => q.state === 'nibble');
-      if (nib) { this.scare(nib, 4); return; }
+      if (nib) { this.scare(nib, 4); this.say('Too early'); return; }
       this.moved();                 // a twitch
       this.ripple(this.lureAt.x, this.lureAt.y, 0.5);
       return;
@@ -254,6 +264,8 @@ export class Fishing {
   moved() { this.lastMove = this.t; }
 
   ripple(x, y, size = 1) { this.ripples.push({ x, y, t: this.t, size }); }
+
+  say(text) { this.note = { text, until: this.t + 1.4 }; }
 
   // ---------- casting and the lure ----------
 
@@ -292,6 +304,7 @@ export class Fishing {
       tension: 0.45, effort: 0, pull: f.kind.str * 0.5, phase: 'rest', phaseT: 0.6, run: 0, runDir: 1,
       stam: 1, snap: 0, slack: 0, jerkCool: 0,
       zone: 0.18 - 0.08 * f.kind.str,   // half the green's width; strong fish have less
+      center: 0.5, centerTo: 0.5,       // where the green is, and where it's drifting to
     };
     this.state = 'fight';
     this.feedback();
@@ -330,7 +343,16 @@ export class Fishing {
     // otherwise. No steady pace holds it: reeling hard all fight snaps the
     // line, stopping lets it go slack, so you have to watch the bar.
     F.tension = clamp(F.tension + (0.9 * F.effort + 0.8 * F.pull - 0.45) * dt, 0, 1);
-    const green = Math.abs(F.tension - 0.5) < F.zone;
+    // The green drifts: harder fish (stronger, wilder) move it further and
+    // faster, and faster still while they run. It never reaches the red or
+    // the slack end.
+    const diff = (k.str + k.wild) / 2;
+    if (Math.abs(F.centerTo - F.center) < 0.01) {
+      F.centerTo = clamp(0.5 + rand(-1, 1) * (0.04 + 0.2 * diff), SLACK + F.zone + 0.02, SNAP - F.zone - 0.02);
+    }
+    const drift = (0.04 + 0.22 * diff) * (F.phase === 'run' ? 1.5 : 1) * dt;
+    F.center += clamp(F.centerTo - F.center, -drift, drift);
+    const green = Math.abs(F.tension - F.center) < F.zone;
     // Line: the fish takes it on a run; reeling brings it in, faster as it tires.
     const reel = F.tension < SNAP ? Math.max(0, F.effort) * 0.1 * (0.35 + 0.65 * (1 - F.stam)) : 0;
     F.d = clamp(F.d + (F.pull * (F.phase === 'run' ? 0.1 : 0.03) - reel) * dt, 0, 0.95);
@@ -400,6 +422,8 @@ export class Fishing {
       if (this.power <= 0) { this.power = 0; this.powerDir = 1; }
     }
     if (this.state === 'cast' && this.t - this.flight.t0 >= CAST_TIME) this.land();
+    this.reels = this.reels.filter((at) => this.t - at < FAST_WINDOW);
+    this.fastReel = this.reels.length >= FAST_TICKS;
     if (this.state === 'lure') {
       this.lureAt.x = clamp(this.lureAt.x + this.spot.current * 0.5 * dt, 0.03, 0.97);
     }
@@ -444,7 +468,8 @@ export class Fishing {
         const d = Math.hypot(L.x - f.x, L.y - f.y);
         const likes = f.kind.lures.includes(this.lure.id);
         const moving = this.t - this.lastMove < MOVED;
-        if (d < SIGHT * (this.lure.glow ? 1.3 : 1) && moving) {
+        if (this.fastReel && d < SIGHT) f.interest = Math.max(0, f.interest - dt * 2);   // a lure racing past isn't food
+        else if (d < SIGHT * (this.lure.glow ? 1.3 : 1) && moving) {
           // Legends are warier: slower to come over.
           if (likes) { f.interest += dt * (f.kind.legend ? 0.6 : 1.4); if (f.interest > 1) f.state = 'chase'; } else if (d < 0.07) this.scare(f, 3);
         } else f.interest = Math.max(0, f.interest - dt * 0.3);
@@ -459,7 +484,8 @@ export class Fishing {
       if ((f.timer -= dt) <= 0) f.state = 'swim';
       return;
     }
-    // chase, nibble, bite: around the lure
+    // chase, nibble, bite: around the lure. Reeling fast scares it off.
+    if (this.fastReel) { this.scare(f, 3); this.say('Too fast'); return; }
     const dx = L.x - f.x, dy = L.y - f.y, d = Math.hypot(dx, dy);
     const reach = fishLen(f) * 0.5;
     if (f.state === 'chase') {
@@ -486,7 +512,7 @@ export class Fishing {
       }
       return;
     }
-    if ((f.timer -= dt) <= 0) this.scare(f, 3);   // too slow: it spat the lure
+    if ((f.timer -= dt) <= 0) { this.scare(f, 3); this.say('Too late'); }   // it spat the lure
   }
 
   // ---------- drawing ----------
@@ -547,6 +573,14 @@ export class Fishing {
       g.textBaseline = 'bottom';
       g.fillStyle = '#ffd84a';
       g.fillText('!', X(this.lureAt.x), Y(this.lureAt.y) - h * 0.03);
+    }
+    // Too early / Too late / Too fast, over where the lure is
+    if (this.note && this.note.until > this.t && this.lureAt) {
+      g.font = font(h * 0.05, 700);
+      g.textAlign = 'center';
+      g.textBaseline = 'bottom';
+      g.fillStyle = `rgba(255,190,170,${Math.min(1, (this.note.until - this.t) * 2)})`;
+      g.fillText(this.note.text, X(this.lureAt.x), Y(this.lureAt.y) - h * 0.03);
     }
     this.drawRod(g, X, Y, h);
     if (this.state === 'aim') this.drawAim(g, X, Y, h);
@@ -663,7 +697,7 @@ export class Fishing {
     g.fillStyle = '#2a3346'; g.fillRect(x, y, bw, bh);
     g.fillStyle = 'rgba(255,107,90,.55)'; g.fillRect(x + bw * SNAP, y, bw * (1 - SNAP), bh);
     g.fillStyle = 'rgba(160,170,190,.35)'; g.fillRect(x, y, bw * SLACK, bh);
-    g.fillStyle = 'rgba(61,220,132,.75)'; g.fillRect(x + bw * (0.5 - F.zone), y, bw * F.zone * 2, bh);
+    g.fillStyle = 'rgba(61,220,132,.75)'; g.fillRect(x + bw * (F.center - F.zone), y, bw * F.zone * 2, bh);
     const warn = F.snap > 0.05 || F.slack > 0.05;
     const mx = x + bw * F.tension;
     g.fillStyle = warn && Math.sin(this.t * 25) > 0 ? '#ff6b5a' : '#f4f6ff';
