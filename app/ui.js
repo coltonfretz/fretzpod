@@ -27,8 +27,10 @@ const SWIPE_PX = 40;       // Now Playing: a sideways swipe this long turns the 
 
 // A menu. rows: [{label, sub, arrow, value(), select(ui)}]. For big lists
 // pass fetch(start, count) -> {rows, total} instead and rows load in pages.
+// arrow: true draws "›" (opens a menu); a string draws that instead ("↗" for
+// a row that leaves the app). start: the row the highlight begins on.
 class List {
-  constructor(title, { rows = null, fetch = null, empty = 'Nothing here', split = false, letters = null, visible = ROWS } = {}) {
+  constructor(title, { rows = null, fetch = null, empty = 'Nothing here', split = false, letters = null, visible = ROWS, start = 0 } = {}) {
     this.title = title;
     this.lettersFn = letters;   // async () => [{l, i}]: where each letter starts
     this.letterIdx = null;
@@ -38,7 +40,7 @@ class List {
     this.fetchPage = fetch;
     this.empty = empty;
     this.split = split;
-    this.sel = 0;
+    this.sel = start;
     this.top = 0;
     this.pages = new Set();
     this.error = null;
@@ -146,7 +148,7 @@ class List {
       if (r?.sub) text.append(el('span', 'sub', r.sub));
       row.append(text);
       if (r?.value) row.append(el('span', 'value', r.value()));
-      if (r?.arrow) row.append(el('span', 'arrow', '›'));
+      if (r?.arrow) row.append(el('span', 'arrow', r.arrow === true ? '›' : r.arrow));
       list.append(row);
     }
     view.append(list);
@@ -968,6 +970,7 @@ export class UI {
 
   pinballTables() {
     return new List('Tables', {
+      start: 1,   // the first table: Total points above it only shows a number
       rows: [
         { label: 'Total points', value: () => pinballSave.load().points.toLocaleString() },
         ...PINBALL_TABLES.map((t, i) => ({
@@ -986,6 +989,7 @@ export class UI {
   // Looks only; picking an open one uses it from the next game.
   pinballBalls() {
     return new List('Balls', {
+      start: 1,   // the first ball: Total points above it only shows a number
       rows: [
         { label: 'Total points', value: () => pinballSave.load().points.toLocaleString() },
         ...PINBALL_BALLS.map((b) => ({
@@ -1022,6 +1026,7 @@ export class UI {
 
   fishingSpots() {
     return new List('Spots', {
+      start: 1,   // the first spot: Total points above it only shows a number
       rows: [
         { label: 'Total points', value: () => fishSave.load().points.toLocaleString() },
         ...FISH_SPOTS.map((s, i) => ({
@@ -1040,6 +1045,7 @@ export class UI {
   // Picking an open one uses it from the next cast.
   fishingLures() {
     return new List('Lures', {
+      start: 1,   // the first lure: Total points above it only shows a number
       rows: [
         { label: 'Total points', value: () => fishSave.load().points.toLocaleString() },
         ...FISH_LURES.map((l) => ({
@@ -1317,7 +1323,9 @@ export class UI {
     // window.open, not location: leaving the page would stop the music. The
     // store links open the phone's own store app.
     const store = (label, url) => ({
-      label, value: () => 'Jellify', arrow: true,
+      // "↗", not "›": these leave the app rather than open a menu. The
+      // FE0E keeps phones from drawing it as an emoji.
+      label, value: () => 'Jellify', arrow: '\u2197\uFE0E',
       select: () => window.open(url, '_blank', 'noopener'),
     });
     const stores = [
