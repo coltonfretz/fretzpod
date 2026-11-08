@@ -8,6 +8,7 @@ import * as api from './api.js';
 import { settings } from './settings.js';
 import { el, fmt, log, logLines, prettyGenre } from './util.js';
 import { StarPinball, PINBALL_TABLES, PINBALL_BALLS, pinballSave, pinballOpen, lockText } from './pinball.js';
+import { goldProgress, goldId, bodyOpen } from './bodies.js';
 import { Fishing, FISH_SPOTS, FISH_LURES, FISH_KINDS, fishSave, fishOpen, fishLockText } from './fishing.js';
 import * as scores from './scores.js';
 import { streamType } from './player.js';
@@ -907,6 +908,22 @@ export class UI {
     });
   }
 
+  // A game's prize body (bodies.js): how far along the lifetime total is, and
+  // once it's open, picking the row puts it on (✓ while it's on).
+  goldRow(game) {
+    const id = goldId(game);
+    return {
+      label: 'Gold Body',
+      value: () => (settings.get('body') === id ? '✓' : goldProgress(game)),
+      select: (ui) => {
+        if (!bodyOpen(id)) return;
+        settings.set('body', id);
+        window.dispatchEvent(new CustomEvent('fp-setting', { detail: 'body' }));
+        ui.render();
+      },
+    };
+  }
+
   // Star Pinball's title menu (pinball.js). Tables and balls open as the
   // points from every game add up; Points shows the total so far.
   pinball() {
@@ -914,6 +931,7 @@ export class UI {
       rows: [
         { label: 'Start Game', arrow: true, select: (ui) => ui.push(ui.pinballTables()) },
         { label: 'Balls', arrow: true, select: (ui) => ui.push(ui.pinballBalls()) },
+        this.goldRow('pinball'),
         { label: 'Exit Game', select: (ui) => ui.back() },
       ],
     });
@@ -967,6 +985,7 @@ export class UI {
         { label: 'Go Fishing', arrow: true, select: (ui) => ui.push(ui.fishingSpots()) },
         { label: 'Lures', arrow: true, select: (ui) => ui.push(ui.fishingLures()) },
         { label: 'Fish Log', arrow: true, select: (ui) => ui.push(ui.fishLog()) },
+        this.goldRow('fish'),
         { label: 'Exit Game', select: (ui) => ui.back() },
       ],
     });
@@ -1031,6 +1050,7 @@ export class UI {
       rows: [
         { label: 'Start Game', arrow: true, select: (ui) => ui.push(ui.golfCourses()) },
         { label: 'Shop', arrow: true, select: (ui) => ui.push(ui.golfShop()) },
+        this.goldRow('golf'),
         { label: 'Exit Game', select: (ui) => ui.back() },
       ],
     });

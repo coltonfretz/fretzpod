@@ -34,6 +34,7 @@
 // ramps and the drawing use z.
 import * as scores from './scores.js';
 import { canvasFont as font, runCanvas, store } from './util.js';
+import { newBodies } from './bodies.js';
 
 const ID = 'pinball';               // the score board's name for it
 const TH = 1.8;                     // table height (width is 1)
@@ -427,7 +428,7 @@ export class StarPinball {
       d.best[this.T.id] = Math.max(d.best[this.T.id] || 0, this.score);
       pinballSave.save(d);
       const opened = (list, kind) => list.filter((x) => x.need > before && x.need <= d.points).map((x) => `New ${kind}: ${x.name}`);
-      this.unlocked = [...opened(TABLES, 'table'), ...opened(BALL_STYLES, 'ball')];
+      this.unlocked = [...opened(TABLES, 'table'), ...opened(BALL_STYLES, 'ball'), ...newBodies()];
     }
     scores.gameOver(this, ID);
   }

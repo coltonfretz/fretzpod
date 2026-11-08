@@ -22,7 +22,7 @@ Inspired by the iPod Classic. Not affiliated with or endorsed by Apple.
   <img src="screenshots/car-mode.webp" alt="Car Mode in Android split screen with the phone upright: Google Maps on top, Fretzpod's big Now Playing and four-button wheel below, purple body" width="180">
   <img src="screenshots/car-mode-sideways.webp" alt="Car Mode in Android split screen with the phone sideways: Google Maps on the left, Fretzpod on the right" width="440">
 
-- **Body colors:** silver, black, blue, red, purple.
+- **Body colors:** silver, black, blue, red, purple. Plus prizes: a gold body for a huge lifetime total in each game, with that game's symbol pressed into the corner, and a clear case showing the insides for all three.
 - **Private:** no play reporting to Jellyfin, no access log, no analytics, nothing loaded from outside your server. See DESIGN.md, "Privacy".
 
 Everyone signs in with their own Jellyfin account (Quick Connect or password) and sees only what that account allows.
@@ -103,6 +103,7 @@ It asks for a Jellyfin admin API key (only to make its own key) and a Home Assis
 | `app/ui.js`, `app/wheel.js`, `app/coverflow.js`, `app/carmode.js` | Screens and menus, the click wheel, Cover Flow, Car Mode. |
 | `app/api.js`, `app/config.js` | Jellyfin calls and sign-in; the site settings (replaced by the build). |
 | `app/pinball.js`, `app/fishing.js`, `app/golf.js`, `app/scores.js` | The games and the high score boards. |
+| `app/bodies.js` | The prize bodies: gold per game and the clear case. |
 | `app/tv.js`, `app/speakers.js` | The optional TV and Speakers. |
 | `app/vendor/` | hls.js 1.7.3 (for TV), Apache 2.0. |
 | `nginx/default.conf` | nginx config template with the Content Security Policy. |

@@ -9,10 +9,15 @@ import { CoverFlow } from './coverflow.js';
 import { CarMode } from './carmode.js';
 import { Output } from './speakers.js';
 import { log } from './util.js';
+import { applyBodyExtras } from './bodies.js';
 
 const $ = (s) => document.querySelector(s);
 
-function applyBody() { document.documentElement.dataset.body = settings.get('body'); }
+function applyBody() {
+  const body = settings.get('body');
+  document.documentElement.dataset.body = body;
+  applyBodyExtras(body);   // a gold body's emblem, the clear case's insides (bodies.js)
+}
 applyBody();
 window.addEventListener('fp-setting', (e) => { if (e.detail === 'body') applyBody(); });
 

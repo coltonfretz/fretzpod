@@ -15,6 +15,7 @@
 // only draws what moves on top of it.
 import { COURSES, coursePar } from './golf-holes.js';
 import { store, canvasFont as font, runCanvas } from './util.js';
+import { newBodies } from './bodies.js';
 
 const W = 400;
 const H = 300;
@@ -618,6 +619,7 @@ export class Golf {
     this.best = d.best[this.course.id];
     this.coinsNow = d.coins;
     this.unlocked = ci + 1 < COURSES.length && !nextWasOpen && courseOpen(ci + 1) ? COURSES[ci + 1].name : null;
+    this.bodies = newBodies();      // a gold body (bodies.js), the coins having added up
     this.banner = null;
     this.setState('card');
   }
@@ -1414,11 +1416,10 @@ export class Golf {
     const diff = this.total - this.par;
     g.fillText(`${diff === 0 ? 'Even par' : diff < 0 ? `${-diff} under par` : `${diff} over par`}${this.newBest ? '  ·  New best!' : `  ·  Best ${this.best}`}`, w / 2, h * 0.67);
     g.fillText(`+${this.coinsEarned} coins${this.bonus ? ' (under par bonus!)' : ''}  ·  ${this.coinsNow} total`, w / 2, h * 0.78);
-    if (this.unlocked) {
-      g.fillStyle = '#1f8a3a';
-      g.font = font(h * 0.062);
-      g.fillText(`${this.unlocked} is open!`, w / 2, h * 0.88);
-    }
+    const news = [...(this.unlocked ? [`${this.unlocked} is open!`] : []), ...(this.bodies || [])];
+    g.fillStyle = '#1f8a3a';
+    g.font = font(h * 0.062);
+    news.forEach((t, i) => g.fillText(t, w / 2, h * (0.88 + i * 0.07)));
   }
 }
 

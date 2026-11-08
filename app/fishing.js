@@ -35,6 +35,7 @@
 // Game units: the view is 1 x 1, (0, 0) top-left, y down toward the shore.
 import * as scores from './scores.js';
 import { canvasFont as font, runCanvas, store } from './util.js';
+import { newBodies } from './bodies.js';
 
 const ID = 'fish';                  // the score board's name for it
 const TAU = Math.PI * 2;
@@ -426,6 +427,7 @@ export class Fishing {
     const opened = [
       ...SPOTS.filter((s) => s.need > before && s.need <= d.points).map((s) => `${s.name} is open`),
       ...LURES.filter((l) => l.need > before && l.need <= d.points).map((l) => `New lure: ${l.name}`),
+      ...newBodies(),
     ];
     this.card = { kind: k, size: f.size, pts, isNew, record, opened };
     this.state = 'card';

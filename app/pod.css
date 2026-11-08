@@ -39,6 +39,46 @@
   --label: #dccdff;
 }
 
+/* Prize bodies (bodies.js). Gold: one per game, for a huge lifetime total,
+   with the game's symbol pressed into the bottom right (#emblem). */
+:root[data-body^="gold"] {
+  --body-top: #f4dc93; --body-bot: #b98a2e;
+  --wheel-hi: #fff7dc; --wheel: #ecd9a2; --wheel-edge: #b8924a;
+  --center-hi: #f6e6b6; --center: #d8bd78;
+  --label: #8a6624;
+}
+/* Clear: the insides (#board, drawn by bodies.js) behind smoky plastic and
+   a frosted wheel. */
+:root[data-body="clear"] {
+  --body-top: #20252c; --body-bot: #0d1014;
+  --wheel-hi: rgba(255,255,255,.34); --wheel: rgba(255,255,255,.12); --wheel-edge: rgba(255,255,255,.35);
+  --center-hi: rgba(255,255,255,.3); --center: rgba(255,255,255,.1);
+  --label: #e8edf4;
+}
+#board { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+#board svg { width: 100%; height: 100%; display: block; }
+/* the plastic over the insides: a sheen, slightly smoky */
+#board::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(125deg, rgba(255,255,255,.16), rgba(255,255,255,0) 35%, rgba(255,255,255,0) 65%, rgba(255,255,255,.08)), rgba(10,14,20,.28);
+}
+:root[data-body="clear"] #pod { position: relative; z-index: 1; }
+:root[data-body="clear"] #wheel { backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
+:root[data-body="clear"] #center { backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); }
+body.cf-on #board { display: none; }
+#pod:has(#emblem) { position: relative; }
+#emblem {
+  position: absolute; right: 7%; bottom: max(18px, env(safe-area-inset-bottom));
+  width: clamp(40px, 13vw, 58px); aspect-ratio: 1;
+  color: rgba(105, 68, 6, .45);
+  pointer-events: none;
+}
+/* pressed in: a dark symbol with a light edge below and a dark edge above */
+#emblem svg {
+  width: 100%; height: 100%; display: block; fill: currentColor;
+  filter: drop-shadow(0 1px 0 rgba(255, 248, 215, .75)) drop-shadow(0 -0.6px 0 rgba(90, 58, 0, .35));
+}
+
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }
 body {
