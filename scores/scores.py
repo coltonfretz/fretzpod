@@ -1,4 +1,4 @@
-"""fretzpod-scores: the shared high score boards for Star Pinball and Space Sheep.
+"""fretzpod-scores: the shared high score boards for Star Pinball and Fishing Trip.
 
 One board per game that everyone on Fretzpod shares.
 See DESIGN.md, "High scores".
@@ -44,7 +44,7 @@ DATA = os.environ.get("DATA", "/data/scores.json")
 # The games with boards, and the highest score each could plausibly reach
 # (a typo guard, not cheat protection).
 # Vortex (until 2026-11-08) is gone; its old scores stay in the file, unused.
-GAMES = {"pinball": 100_000_000, "sheep": 10_000_000}
+GAMES = {"pinball": 100_000_000, "fish": 100_000_000}
 TOP = 10
 AUTH_TTL = 600          # seconds a phone's sign-in stays trusted before asking Jellyfin again
 SUBMIT_GAP = 1.0        # seconds between submits (or renames) from one person

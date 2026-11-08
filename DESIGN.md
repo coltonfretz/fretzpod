@@ -98,7 +98,7 @@ Sonos --PUBLIC_BASE/speakers/audio/<signed link>--> nginx --> fretzpod-speakers 
 
 ## High scores
 
-Optional. One shared board per game (Star Pinball, Space Sheep) for everyone on the server.
+Optional. One shared board per game (Star Pinball, Fishing Trip) for everyone on the server. Fishing Trip's board is each person's points total, which only goes up, so it's sent after every catch.
 
 - `fretzpod-scores` (stdlib Python) holds no secrets. It asks Jellyfin `/Users/Me` with the phone's own sign-in to know who's posting.
 - It keeps, per Jellyfin user id, a number and a name the person picked, and per game their best score and the day they set it. One JSON file, no request log. Jellyfin names are never stored or shown: you're "Player 3" until you pick a name with the wheel (A-Z, 0-9, space, dash, up to 10, unique).
@@ -116,3 +116,11 @@ An original space pinball table, in the spirit of the pinball game that came wit
 Three tables, all sharing the lower half (flippers, slingshots, inlanes, plunger) so the flippers feel the same everywhere: Star Run (the first), Nebula (a planet bumper with a moon going round it, the ramp on the right) and Event Horizon (a star with two moons, two ramps crossing over the top, the black hole in the middle). Moons are bumpers on the move; a hit is worked out against the moon's own speed. Every game's score adds to a points total kept on the phone, which opens the other tables (200k, 500k) and four more balls (50k to 700k) from the Star Pinball menu. The balls only change the look (a comet and the sun leave a tail), so scores stay comparable, and all tables share the one high score board. The total starts from the best score already on the phone, so games from before count.
 
 Flippers can't wait for a thumb to lift, which is when the wheel normally counts a press, and both get held at once. So a screen can turn on the wheel's raw mode (`rawButtons`): each button reports when it's touched and when it's let go, one per thumb, and turning is off. Only Star Pinball uses it; everywhere else the wheel works as before.
+
+## Fishing Trip
+
+Fishing from the shore, in the spirit of the console RPG fishing minigames (Colton named Breath of Fire 3's): pick out the fish you want, get it to take the lure, fight it in, and fill a Fish Log. It replaced Space Sheep (2026-11-08), which asked for too many buttons in too small a ring. Original fish art, places and rules; nothing copied.
+
+The wheel is the reel. Aim by turning, center starts the power bar and center again casts. With the lure in the water, turning forward reels it in (a moving lure is what draws fish), previous and next steer it sideways, and center twitches it. Each kind of fish only takes certain lures. A fish that likes the lure comes over and nibbles; the phone buzzes when it bites and center hooks it, while center during the nibble scares it off. In the fight, reeling raises the line tension and the fish's pull raises it more, and both sag when you stop: no steady pace holds the marker in the green, so you watch the bar, spinning forward or back. Too high for too long snaps the line, too slack lets the fish throw the hook, and tapping center during a run breaks it. `tools/sims/fishing.mjs` checks a careful player lands nearly everything and one who just spins forward loses everything.
+
+Three spots (Lily Pond, Rocky River at 2,000 points, Sea Cliffs at 6,000), four lures (Worm, Spinner at 300, Frog at 1,500, Glow Jig at 4,000) and 18 kinds of fish, one rare legend per spot. Points from every catch add up on the phone, and a first catch of a kind counts double. Play/pause does nothing in the game.

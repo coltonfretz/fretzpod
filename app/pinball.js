@@ -1,5 +1,5 @@
 // Star Pinball: a space pinball table for the click wheel, in Extras with
-// Space Sheep and Tiki Golf. It replaced Vortex (2026-11-08): Colton wanted
+// Fishing Trip and Tiki Golf. It replaced Vortex (2026-11-08): Colton wanted
 // a pinball game in the spirit of the old Windows space pinball. Original
 // table, rules and art; nothing is copied from that game.
 //

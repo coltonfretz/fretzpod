@@ -14,3 +14,15 @@ Math.random = () => {
   t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
   return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
 };
+
+// A localStorage that lives for the run, so what a game saves (Fishing
+// Trip's points and log) reads back the same as on a phone.
+const mem = new Map();
+Object.defineProperty(globalThis, 'localStorage', {
+  configurable: true,
+  value: {
+    getItem: (k) => (mem.has(k) ? mem.get(k) : null),
+    setItem: (k, v) => { mem.set(k, String(v)); },
+    removeItem: (k) => { mem.delete(k); },
+  },
+});

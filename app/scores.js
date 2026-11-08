@@ -1,4 +1,4 @@
-// Shared high score boards for Star Pinball and Space Sheep:
+// Shared high score boards for Star Pinball and Fishing Trip:
 // one board per game for everyone on Fretzpod. The fretzpod-scores service
 // (scores/scores.py) keeps each person's best; see DESIGN.md, "High scores".
 // Also the parts both games share: the best kept on the phone, sending a
@@ -17,7 +17,7 @@ import { store, log, el, canvasFont as font } from './util.js';
 
 export const BOARDS = [
   { id: 'pinball', name: 'Star Pinball' },
-  { id: 'sheep', name: 'Space Sheep' },
+  { id: 'fish', name: 'Fishing Trip' },
 ];
 const PENDING = 'fp.scores.pending';
 const ME = 'fp.scores.me';            // {name, named} as the board last said, for the menu
@@ -77,7 +77,7 @@ export async function board(game) {
 
 // ---------- the games' side ----------
 //
-// `game` is a StarPinball or SpaceSheep, which carry score, best, sent (this
+// `game` is a StarPinball or Fishing, which carry score, best, sent (this
 // game's score has gone), result (the board's answer) and ui.
 
 export const localBest = (id) => Number(store.get(`fp.${id}.best`, '0')) || 0;

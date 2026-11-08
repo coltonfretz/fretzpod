@@ -164,9 +164,12 @@ await shot('08-tv');
 });
 
 // ---- Extras
-for (const game of ['Star Pinball', 'Space Sheep']) await section(game, async () => {
-  await go('Extras'); await go(game); await wait(1500);
-  await key('Enter'); await key('ArrowDown', 4); await key('ArrowRight'); await wait(1500);
+// Each game opens from its own menu: game, then Start/Go, then the first table or spot.
+for (const [game, ...path] of [['Star Pinball', 'Start Game', 'Star Run'], ['Fishing Trip', 'Go Fishing', 'Lily Pond']]) await section(game, async () => {
+  await go('Extras'); await go(game);
+  for (const step of path) await go(step);
+  await wait(1500);
+  await key('Enter'); await wait(1500);
   await shot(`09-${game.replace(' ', '').toLowerCase()}`);
   const drawn = await p.evaluate(() => { const c = document.querySelector('canvas.game'); if (!c) return 'no canvas'; const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0; for (let i = 0; i < d.length; i += 4000) if (d[i] || d[i + 1] || d[i + 2]) n++; return n; });
   check(`${game} draws`, typeof drawn === 'number' && drawn > 5, String(drawn));

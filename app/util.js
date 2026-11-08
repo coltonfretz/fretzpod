@@ -52,7 +52,7 @@ export class Emitter {
   emit(what) { for (const fn of this.listeners) fn(what); }
 }
 
-// ---------- canvas games (Star Pinball, Space Sheep, Tiki Golf) ----------
+// ---------- canvas games (Star Pinball, Fishing Trip, Tiki Golf) ----------
 
 export const canvasFont = (px, weight = 700) => `${weight} ${Math.round(px)}px "Helvetica Neue", Helvetica, Arial, sans-serif`;
 

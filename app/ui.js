@@ -8,7 +8,7 @@ import * as api from './api.js';
 import { settings } from './settings.js';
 import { el, fmt, log, logLines, prettyGenre } from './util.js';
 import { StarPinball, PINBALL_TABLES, PINBALL_BALLS, pinballSave, pinballOpen, lockText } from './pinball.js';
-import { SpaceSheep } from './spacesheep.js';
+import { Fishing, FISH_SPOTS, FISH_LURES, FISH_KINDS, fishSave, fishOpen, fishLockText } from './fishing.js';
 import * as scores from './scores.js';
 import { streamType } from './player.js';
 import { listSpeakers } from './speakers.js';
@@ -763,7 +763,7 @@ export class UI {
     }
     if (button !== 'next' && button !== 'prev') return;
     // Holding next/previous scrubs the song on Now Playing, opening it from
-    // anywhere else, except on screens with their own hold (TV, Space Sheep,
+    // anywhere else, except on screens with their own hold (TV,
     // Tiki Golf).
     if (!(top instanceof NowPlaying)) {
       if (top?.hold) { top.hold(button); return; }
@@ -944,6 +944,72 @@ export class UI {
     });
   }
 
+  // Fishing Trip's title menu (fishing.js). Spots and lures open as the
+  // points from every catch add up; the Fish Log is the collection.
+  fishing() {
+    return new List('Fishing Trip', {
+      rows: [
+        { label: 'Go Fishing', arrow: true, select: (ui) => ui.push(ui.fishingSpots()) },
+        { label: 'Lures', arrow: true, select: (ui) => ui.push(ui.fishingLures()) },
+        { label: 'Fish Log', arrow: true, select: (ui) => ui.push(ui.fishLog()) },
+        { label: 'Exit Game', select: (ui) => ui.back() },
+      ],
+    });
+  }
+
+  fishingSpots() {
+    return new List('Spots', {
+      rows: [
+        { label: 'Points', value: () => fishSave.load().points.toLocaleString() },
+        ...FISH_SPOTS.map((s, i) => ({
+          label: s.name,
+          value: () => {
+            if (!fishOpen(s)) return fishLockText(s);
+            const log = fishSave.load().log, kinds = FISH_KINDS.filter((f) => f.spot === s.id);
+            return `${kinds.filter((f) => log[f.id]).length} / ${kinds.length}`;
+          },
+          select: (ui) => { if (fishOpen(s)) ui.push(new Fishing(i, () => ui.wheel.feedback())); },
+        })),
+      ],
+    });
+  }
+
+  // Picking an open one uses it from the next cast.
+  fishingLures() {
+    return new List('Lures', {
+      rows: [
+        { label: 'Points', value: () => fishSave.load().points.toLocaleString() },
+        ...FISH_LURES.map((l) => ({
+          label: l.name,
+          value: () => (!fishOpen(l) ? fishLockText(l) : fishSave.load().lure === l.id ? '✓' : ''),
+          select: (ui) => {
+            if (!fishOpen(l)) return;
+            const d = fishSave.load();
+            d.lure = l.id;
+            fishSave.save(d);
+            ui.render();
+          },
+        })),
+      ],
+    });
+  }
+
+  // Every kind of fish, in spot order: unknown ones show only where they
+  // live; caught ones show the lures they take and the biggest so far.
+  fishLog() {
+    const log = fishSave.load().log;
+    const spotName = (id) => FISH_SPOTS.find((s) => s.id === id).name;
+    const lureName = (id) => FISH_LURES.find((l) => l.id === id).name;
+    return new List('Fish Log', {
+      rows: [
+        { label: 'Caught', value: () => `${FISH_KINDS.filter((f) => log[f.id]).length} / ${FISH_KINDS.length}` },
+        ...FISH_KINDS.map((f) => (log[f.id]
+          ? { label: f.name, sub: f.lures.map(lureName).join(', '), value: () => `${log[f.id].best} cm` }
+          : { label: '???', sub: spotName(f.spot) })),
+      ],
+    });
+  }
+
   // Tiki Golf's title menu (golf.js).
   golf() {
     return new List('Tiki Golf', {
@@ -992,7 +1058,7 @@ export class UI {
     return new List('Extras', {
       rows: [
         { label: 'Star Pinball', arrow: true, select: (ui) => ui.push(ui.pinball()) },
-        { label: 'Space Sheep', arrow: true, select: (ui) => ui.push(new SpaceSheep(() => ui.wheel.feedback())) },
+        { label: 'Fishing Trip', arrow: true, select: (ui) => ui.push(ui.fishing()) },
         { label: 'Tiki Golf', arrow: true, select: (ui) => ui.push(ui.golf()) },
         { label: 'High Scores', arrow: true, select: (ui) => ui.push(ui.highScores()) },
       ],

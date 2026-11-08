@@ -1,6 +1,6 @@
 # Game simulators
 
-Headless checks for Tiki Golf, Star Pinball and Space Sheep. They import the real game code from
+Headless checks for Tiki Golf, Star Pinball and Fishing Trip. They import the real game code from
 `app/`, so they always test what is deployed. Run them with Node from this
 folder; nothing here is served to phones.
 
@@ -22,15 +22,22 @@ folder; nothing here is served to phones.
   it about once a game. `TABLE=1` and `TABLE=2` play Nebula and Event
   Horizon; `WHERE=1` prints where each stuck ball sat. Rerun after moving
   anything on a table in `pinball.js`.
-- `node sheep.mjs`: Space Sheep, 6 games doing nothing and 6 with a bot that
-  plays like a quick human (wheel ticks capped, shots capped). On 2026-10-25:
-  idle dies first at 10-20 s, the bot reaches wave 6-11 in 1 to 1.5 minutes,
-  enemies almost never fall into the sun on their own. Rerun after changing
-  the AI, gravity, speeds or sizes in `spacesheep.js`.
+- `node fishing.mjs [minutes]`: Fishing Trip played by a bot like a person
+  (aims at a fish that takes the lure, casts past it, reels slowly, hooks a
+  bite after a human reaction time, fights by spinning to keep the tension
+  marker in the green at a thumb's speed). `SPOT=0|1|2`,
+  `LURE=worm|spinner|frog|jig`, `SKILL=0.5` for a slower, sloppier player,
+  `SPAM=1` for one who just spins forward through every fight. On
+  2026-11-08: the careful bot lands 2 to 3 fish a minute and loses none,
+  SKILL=0.5 about 2 a minute and loses the odd one to slack, SPAM=1 snaps
+  the line every time. Fights average 12 to 25 s. Points a minute (about
+  150 to 300 at the pond and river, 450 to 800 at the sea) are what the
+  unlock points are set against. Rerun after changing the fight, the fish
+  or the unlock points in `fishing.js`.
 
-`env.mjs` seeds the randomness (start times, mole order, enemy aim), so
+`env.mjs` seeds the randomness (start times, mole order, which fish swim in), so
 the same code prints the same output every run. That makes a cleanup
 checkable: run the sims on the last commit and on the change and diff the
 output; anything but the timings differing means behavior changed. For
-balance work try a few seeds (`SEED=2 node sheep.mjs`), since one seed is
+balance work try a few seeds (`SEED=2 node fishing.mjs`), since one seed is
 one set of dice rolls.
