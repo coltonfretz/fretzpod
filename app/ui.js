@@ -7,7 +7,7 @@
 import * as api from './api.js';
 import { settings } from './settings.js';
 import { el, fmt, log, logLines, prettyGenre } from './util.js';
-import { Vortex } from './vortex.js';
+import { StarPinball } from './pinball.js';
 import { SpaceSheep } from './spacesheep.js';
 import * as scores from './scores.js';
 import { streamType } from './player.js';
@@ -740,6 +740,18 @@ export class UI {
     else if (button === 'prev') this.player.prev();
   }
 
+  // Raw buttons (wheel.js), for a game that needs each press and release as
+  // it happens (Star Pinball's flippers and plunger). MENU and play still
+  // act on the touch, like a press.
+  raw() { return this.top?.rawButtons === true; }
+
+  down(button) {
+    if (button === 'menu' || button === 'play') { this.press(button); return; }
+    this.top?.down?.(button);
+  }
+
+  up(button) { this.top?.up?.(button); }
+
   // Returns true when a screen took a center hold (the wheel then doesn't
   // count the release as a press).
   hold(button) {
@@ -927,7 +939,7 @@ export class UI {
   extras() {
     return new List('Extras', {
       rows: [
-        { label: 'Vortex', arrow: true, select: (ui) => ui.push(new Vortex(() => ui.wheel.feedback())) },
+        { label: 'Star Pinball', arrow: true, select: (ui) => ui.push(new StarPinball(() => ui.wheel.feedback())) },
         { label: 'Space Sheep', arrow: true, select: (ui) => ui.push(new SpaceSheep(() => ui.wheel.feedback())) },
         { label: 'Tiki Golf', arrow: true, select: (ui) => ui.push(ui.golf()) },
         { label: 'High Scores', arrow: true, select: (ui) => ui.push(ui.highScores()) },

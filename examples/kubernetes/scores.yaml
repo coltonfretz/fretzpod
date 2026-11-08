@@ -1,4 +1,4 @@
-# fretzpod-scores: the shared high score boards for Vortex and Space Sheep.
+# fretzpod-scores: the shared high score boards for Star Pinball and Space Sheep.
 # See DESIGN.md, "High scores", and scores/scores.py. Optional: copy to
 # site/scores.yaml to deploy it, and set helpers.scores in site.json.
 #

@@ -33,6 +33,9 @@ const wheel = new Wheel($('#wheel'), $('#center'), {
   press: (b) => target().press(b),
   hold: (b) => target().hold(b),
   holdEnd: (b) => target().holdEnd(b),
+  raw: () => target().raw?.() === true,
+  down: (b) => target().down?.(b),
+  up: (b) => target().up?.(b),
 }, {
   clicker: () => settings.get('clicker') === 'on',
   haptics: () => settings.get('haptics'),

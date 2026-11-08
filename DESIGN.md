@@ -98,7 +98,7 @@ Sonos --PUBLIC_BASE/speakers/audio/<signed link>--> nginx --> fretzpod-speakers 
 
 ## High scores
 
-Optional. One shared board per game (Vortex, Space Sheep) for everyone on the server.
+Optional. One shared board per game (Star Pinball, Space Sheep) for everyone on the server.
 
 - `fretzpod-scores` (stdlib Python) holds no secrets. It asks Jellyfin `/Users/Me` with the phone's own sign-in to know who's posting.
 - It keeps, per Jellyfin user id, a number and a name the person picked, and per game their best score and the day they set it. One JSON file, no request log. Jellyfin names are never stored or shown: you're "Player 3" until you pick a name with the wheel (A-Z, 0-9, space, dash, up to 10, unique).
@@ -108,3 +108,9 @@ Optional. One shared board per game (Vortex, Space Sheep) for everyone on the se
 ## Tiki Golf
 
 An original minigolf game inspired by the tiki minigolf in the PS2 game *Madagascar* (2005). Original holes and art; nothing copied. Two courses of nine holes. Turn the wheel to aim, press the center to lock it, then again to stop the power meter. Gadgets include gates, pool bumpers, tubes, moles, cranes, slopes and moving obstacles. Every hole is checked in `tools/sims` to be finishable at or under par. Coins from good holes buy balls and trails in the Shop.
+
+## Star Pinball
+
+An original space pinball table, in the spirit of the pinball game that came with old Windows. Original table, rules and art; nothing copied. Previous and next are the left and right flippers, holding the center pulls the plunger. Missions in a loop fly you planet to planet: light the three top lanes, hit the bumpers, knock down the drop targets, shoot the black hole (that one ends in multiball). Lanes also raise the multiplier, and a full loop of missions gives an extra ball. The screen shows about two-thirds of the table and follows the ball. `tools/sims/pinball.mjs` checks the table holds the ball and nothing gets stuck.
+
+Flippers can't wait for a thumb to lift, which is when the wheel normally counts a press, and both get held at once. So a screen can turn on the wheel's raw mode (`rawButtons`): each button reports when it's touched and when it's let go, one per thumb, and turning is off. Only Star Pinball uses it; everywhere else the wheel works as before.

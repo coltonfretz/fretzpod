@@ -1,4 +1,4 @@
-"""fretzpod-scores: the shared high score boards for Vortex and Space Sheep.
+"""fretzpod-scores: the shared high score boards for Star Pinball and Space Sheep.
 
 One board per game that everyone on Fretzpod shares.
 See DESIGN.md, "High scores".
@@ -19,7 +19,7 @@ needed): per Jellyfin user id, a number (the "3" in Player 3) and the name
 they picked, if any; per game, their best score and the day they set it.
 One file, /data/scores.json, on its own small volume. No request log.
 
-  GET  /scores/api/board?game=vortex       the top 10, where you stand, your name
+  GET  /scores/api/board?game=pinball      the top 10, where you stand, your name
   POST /scores/api/submit {game, score}    keeps it if it beats your best
   POST /scores/api/name {name}             sets your name ("" goes back to Player N)
 
@@ -43,7 +43,8 @@ JF_URL = os.environ["JF_URL"].rstrip("/")
 DATA = os.environ.get("DATA", "/data/scores.json")
 # The games with boards, and the highest score each could plausibly reach
 # (a typo guard, not cheat protection).
-GAMES = {"vortex": 10_000_000, "sheep": 10_000_000}
+# Vortex (until 2026-11-08) is gone; its old scores stay in the file, unused.
+GAMES = {"pinball": 100_000_000, "sheep": 10_000_000}
 TOP = 10
 AUTH_TTL = 600          # seconds a phone's sign-in stays trusted before asking Jellyfin again
 SUBMIT_GAP = 1.0        # seconds between submits (or renames) from one person

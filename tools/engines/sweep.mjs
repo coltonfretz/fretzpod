@@ -164,7 +164,7 @@ await shot('08-tv');
 });
 
 // ---- Extras
-for (const game of ['Vortex', 'Space Sheep']) await section(game, async () => {
+for (const game of ['Star Pinball', 'Space Sheep']) await section(game, async () => {
   await go('Extras'); await go(game); await wait(1500);
   await key('Enter'); await key('ArrowDown', 4); await key('ArrowRight'); await wait(1500);
   await shot(`09-${game.replace(' ', '').toLowerCase()}`);

@@ -1,6 +1,6 @@
 # Game simulators
 
-Headless checks for Tiki Golf, Vortex and Space Sheep. They import the real game code from
+Headless checks for Tiki Golf, Star Pinball and Space Sheep. They import the real game code from
 `app/`, so they always test what is deployed. Run them with Node from this
 folder; nothing here is served to phones.
 
@@ -12,8 +12,13 @@ folder; nothing here is served to phones.
   gadgets on the green, nothing overlapping).
 - `node probe.mjs`: full-power putts at the starting aim on Grand Tour holes
   1, 3, 5, 8 and 9 (the "no thought needed" ace check from 2026-10-24).
-- `node vortex.mjs`: a perfect paddle plays Vortex for 10 game-minutes; it
-  should climb levels, catch power-ups and never throw.
+- `node pinball.mjs [games]`: Star Pinball on autopilot (flips a moment
+  after a ball comes near a flipper, missing a share: MISS=0.25 by default,
+  MISS=0 never misses). Watch for `escapes` (a ball outside the table: a gap
+  in the walls) and `nudges` (a ball stuck long enough for the ball search),
+  both should be 0. On 2026-11-08: MISS=0.25 games last about a minute and
+  finish ~2 missions, MISS=0.1 about two minutes and ~4 missions, with
+  multiballs. Rerun after moving anything on the table in `pinball.js`.
 - `node sheep.mjs`: Space Sheep, 6 games doing nothing and 6 with a bot that
   plays like a quick human (wheel ticks capped, shots capped). On 2026-10-25:
   idle dies first at 10-20 s, the bot reaches wave 6-11 in 1 to 1.5 minutes,

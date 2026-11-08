@@ -1,4 +1,4 @@
-// Tiki Golf: minigolf for the click wheel, in Extras next to Vortex and Space Sheep.
+// Tiki Golf: minigolf for the click wheel, in Extras next to Star Pinball and Space Sheep.
 //
 // Inspired by the tiki minigolf in the PS2 game Madagascar (2005). This is an
 // original game built around how that one played: an arrow behind the ball that swings as you turn, a power meter

@@ -8,6 +8,12 @@
 //
 // On a computer the same controls come from the keyboard and the mouse wheel
 // (keys()), so Fretzpod works in a desktop browser without dragging the ring.
+//
+// Raw mode, for a screen that says so (handlers.raw(), Star Pinball's
+// flippers): every button reports down(button) the moment it's touched and
+// up(button) when it's let go, several at once (one thumb per flipper), and
+// the ring doesn't turn. A normal press only counts when the thumb lifts,
+// which is far too late for a flipper.
 
 import { log } from './util.js';
 
@@ -31,7 +37,8 @@ function capture(target, id) {
 }
 
 export class Wheel {
-  // handlers: turn(dir), press(button), hold(button), holdEnd(button)
+  // handlers: turn(dir), press(button), hold(button), holdEnd(button),
+  // and for raw mode raw() (is it on now), down(button), up(button)
   // prefs: clicker() says whether the click sound is on; haptics() gives the
   // vibration level ('light' | 'strong' | 'off')
   constructor(ring, center, handlers, prefs) {
@@ -42,6 +49,7 @@ export class Wheel {
     this.audio = null;
     this.clickBuf = null;
     this.touch = null;
+    this.rawTouches = new Map();   // pointerId -> button, raw mode only
     ring.addEventListener('pointerdown', (e) => this.down(e));
     ring.addEventListener('pointermove', (e) => this.move(e));
     ring.addEventListener('pointerup', (e) => this.up(e, false));
@@ -51,12 +59,15 @@ export class Wheel {
     // slow press still counts as a press when it's let go.
     let centerHold = null;
     let centerHeld = false;
+    let centerRaw = false;
     center.addEventListener('pointerdown', (e) => {
       e.stopPropagation();
       this.unlockAudio();
       center.classList.add('pressed');
       capture(center, e.pointerId);
       centerHeld = false;
+      centerRaw = this.isRaw();
+      if (centerRaw) { this.feedback(true); this.h.down('select'); return; }
       clearTimeout(centerHold);
       centerHold = setTimeout(() => {
         if (this.h.hold('select') === true) { centerHeld = true; this.feedback(true); }
@@ -66,12 +77,17 @@ export class Wheel {
       e.stopPropagation();
       clearTimeout(centerHold);
       center.classList.remove('pressed');
+      if (centerRaw) { centerRaw = false; this.h.up('select'); return; }
       if (centerHeld) return;
       const r = center.getBoundingClientRect();
       const inside = e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
       if (inside) { this.feedback(true); this.h.press('select'); }
     });
-    center.addEventListener('pointercancel', () => { clearTimeout(centerHold); center.classList.remove('pressed'); });
+    center.addEventListener('pointercancel', () => {
+      clearTimeout(centerHold);
+      center.classList.remove('pressed');
+      if (centerRaw) { centerRaw = false; this.h.up('select'); }
+    });
     // A long press would otherwise open the browser's context menu.
     ring.addEventListener('contextmenu', (e) => e.preventDefault());
   }
@@ -82,6 +98,7 @@ export class Wheel {
   // sign-in) or with Ctrl/Cmd/Alt down, so browser shortcuts still work.
   keys(scrollArea) {
     const held = new Map();   // key -> {timer, holding}
+    const rawKeys = new Set();   // keys down in raw mode
     const typing = (e) => e.target.closest?.('input, textarea, select, button');
     window.addEventListener('keydown', (e) => {
       const k = KEYS[e.key];
@@ -89,7 +106,8 @@ export class Wheel {
       e.preventDefault();
       this.unlockAudio();
       if (typeof k === 'number') { this.h.turn(k); return; }
-      if (e.repeat || held.has(e.key)) return;   // auto-repeat: the hold timer handles it
+      if (e.repeat || held.has(e.key) || rawKeys.has(e.key)) return;   // auto-repeat: the hold timer handles it
+      if (this.isRaw()) { rawKeys.add(e.key); this.feedback(true); this.h.down(k); return; }
       const h = { holding: false, timer: null };
       held.set(e.key, h);
       h.timer = setTimeout(() => {
@@ -104,6 +122,7 @@ export class Wheel {
       }, HOLD_MS);
     });
     window.addEventListener('keyup', (e) => {
+      if (rawKeys.delete(e.key)) { this.h.up(KEYS[e.key]); return; }
       const h = held.get(e.key);
       if (!h) return;
       held.delete(e.key);
@@ -122,6 +141,8 @@ export class Wheel {
         if (h.holding && KEYS[key] !== 'select') this.h.holdEnd(KEYS[key]);
       }
       held.clear();
+      for (const key of rawKeys) this.h.up(KEYS[key]);
+      rawKeys.clear();
     });
     // Scrolling turns the wheel; trackpads send many small deltas, so they add
     // up to one step per SCROLL_PX. Lines/pages (deltaMode 1/2) step directly.
@@ -152,11 +173,21 @@ export class Wheel {
     return 'prev';
   }
 
+  isRaw() { return this.h.raw?.() === true; }
+
   down(e) {
     if (e.target === this.center || this.center.contains(e.target)) return;
     this.unlockAudio();
     capture(this.ring, e.pointerId);
     const a = this.angle(e);
+    if (this.isRaw()) {
+      const button = this.sector(a);
+      this.rawTouches.set(e.pointerId, button);
+      this.ring.classList.add('pressed-' + button);
+      this.feedback(true);
+      this.h.down(button);
+      return;
+    }
     const t = { id: e.pointerId, last: a, acc: 0, turned: 0, button: this.sector(a), holding: false, timer: null };
     t.timer = setTimeout(() => {
       if (this.touch !== t || t.turned > TAP_SLOP) return;
@@ -170,6 +201,7 @@ export class Wheel {
   }
 
   move(e) {
+    if (this.rawTouches.has(e.pointerId)) return;
     const t = this.touch;
     if (!t || t.id !== e.pointerId || t.holding) return;
     const a = this.angle(e);
@@ -188,6 +220,13 @@ export class Wheel {
   }
 
   up(e, cancelled) {
+    const button = this.rawTouches.get(e.pointerId);
+    if (button) {
+      this.rawTouches.delete(e.pointerId);
+      if (![...this.rawTouches.values()].includes(button)) this.ring.classList.remove('pressed-' + button);
+      this.h.up(button);
+      return;
+    }
     const t = this.touch;
     if (!t || t.id !== e.pointerId) return;
     clearTimeout(t.timer);

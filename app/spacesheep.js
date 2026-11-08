@@ -7,7 +7,7 @@
 // around it. The screen wraps at the edges. Touching the sun is a lost life.
 //
 // Wheel: turning aims the sheep (it swings round smoothly toward where the
-// wheel points, like the Vortex paddle). Center fires. Next burns the
+// wheel points, like the old Vortex paddle). Center fires. Next burns the
 // jetpack: a tap is a short push, holding keeps it lit. The wheel only follows
 // one thumb on the ring, so you can't steer and burn at the same moment;
 // aim, then burn. Previous jumps through hyperspace to a random spot (a
@@ -273,7 +273,7 @@ export class SpaceSheep {
   step(dt) {
     if (this.state !== 'play') return;
     const p = this.player;
-    // Your sheep eases toward the wheel's aim, like the Vortex paddle. The aim
+    // Your sheep eases toward the wheel's aim, like the old Vortex paddle. The aim
     // isn't wrapped (a full spin of the wheel is a full turn), so it's pulled
     // back in now and then before it grows huge.
     if (!p.gone) {
