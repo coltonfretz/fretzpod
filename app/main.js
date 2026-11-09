@@ -153,7 +153,9 @@ applyOrientation();
 
 sleep = new Sleep($('#screen'), player, {
   calm: () => ui.calm() && !car.on && !document.body.classList.contains('cf-on'),
+  reading: () => ui.reading() && !car.on,
 });
+window.addEventListener('fp-sleep', () => sleep.showClock());
 
 // Test hook for the dev server only (Claude's browser pane has no rotation).
 if (location.hostname === 'localhost') {

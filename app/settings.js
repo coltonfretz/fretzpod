@@ -36,10 +36,18 @@ const DEFS = {
     label: 'Screen', values: ['light', 'dark', 'night', 'phone'],
     names: { light: 'Light', dark: 'Dark', night: 'At Night', phone: 'Match Phone' }, def: 'light',
   },
-  // How long with no input, while music plays, before the sleep screen (sleep.js).
+  // How long with no input, while music plays, before the Art Screen
+  // (sleep.js). The key is still 'sleep': it was called Sleep Screen in 0.21,
+  // and renaming the key would lose people's choice.
   sleep: {
-    label: 'Sleep Screen', values: ['off', 's30', 'm2'],
+    label: 'Art Screen', values: ['off', 's30', 'm2'],
     names: { off: 'Off', s30: '30 Seconds', m2: '2 Minutes' }, def: 'off',
+  },
+  // Sleep Mode, the dim clock (sleep.js): by hand only (hold Play/Pause, or
+  // Sleep in the main menu), or also on its own at night.
+  sleepMode: {
+    label: 'Sleep Mode', values: ['off', 'hand', 'night'],
+    names: { off: 'Off', hand: 'By Hand', night: 'At Night' }, def: 'off',
   },
   // The gold bodies and the clear case are prizes from the games (bodies.js):
   // they're only offered once open.

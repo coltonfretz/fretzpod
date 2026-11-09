@@ -4,7 +4,7 @@
 import { store, newId, log, clearLog } from './util.js';
 import site from './config.js';
 
-export const VERSION = '0.23.0';
+export const VERSION = '0.24.0';
 
 // Which Jellyfin this copy talks to comes from the site settings
 // (config.js, written by build.py from site/site.json): by the address the

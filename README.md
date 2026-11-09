@@ -24,7 +24,8 @@ Inspired by the iPod Classic. Not affiliated with or endorsed by Apple.
   <img src="screenshots/car-mode-sideways.webp" alt="Car Mode in Android split screen with the phone sideways: Google Maps on the left, Fretzpod on the right" width="440">
 
 - **Dark screen:** Settings -> Screen: Light, Dark, At Night (dark from 8 PM to 7 AM) or Match Phone. Car Mode follows it too.
-- **Sleep screen:** Settings -> Sleep Screen: after 30 seconds or 2 minutes with no input while music plays, the screen shows just the album art on black and the wheel dims. The first touch only wakes it. (The phone's own screen timeout still applies.)
+- **Art Screen:** Settings -> Art Screen: after 30 seconds or 2 minutes with no input while music plays, the screen shows just the album art on black and the wheel dims. The first touch only wakes it.
+- **Sleep Mode:** Settings -> Sleep Mode: the whole screen goes black with only the time in dim gray, like a bedside clock, and the music keeps playing. By Hand: hold Play/Pause for about a second (like switching the old iPod off) or pick Sleep in the main menu. At Night: also on its own from 10 PM to 7 AM after a minute with no input. The screen stays on while it shows, through the night hours with At Night, and while the lyrics are up (https copies only; browsers don't allow it on plain http).
 - **Body colors:** silver, black, blue, red, purple. Settings -> Wheel gives the wheel a color of its own, and Settings -> Selection changes the highlight color (the gold and clear prize bodies keep their own wheel, but take the highlight color). Plus prizes: a gold body for a huge lifetime total in each game, with that game's symbol pressed into the corner, and a clear case showing the insides for all three.
 - **Private:** no play reporting to Jellyfin, no access log, no analytics, nothing loaded from outside your server. See DESIGN.md, "Privacy".
 

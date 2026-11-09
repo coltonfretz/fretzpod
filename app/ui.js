@@ -764,9 +764,18 @@ export class UI {
 
   // A screen the sleep screen may cover (sleep.js): menus, Now Playing and
   // Search, not a game, TV or sign-in.
+  // Lyrics being read count as busy, not calm.
   calm() {
     const t = this.top;
-    return t instanceof List || t instanceof NowPlaying || t instanceof Search || t instanceof CoverFlowScreen;
+    if (t instanceof NowPlaying) return !t.lyricsOn;
+    return t instanceof List || t instanceof Search || t instanceof CoverFlowScreen;
+  }
+
+  // Lyrics up while music plays: the screen is kept on (sleep.js) so it
+  // doesn't time out mid-song.
+  reading() {
+    const t = this.top;
+    return t instanceof NowPlaying && t.lyricsOn && this.player.playing && !this.player.paused;
   }
 
   reset(screen) {
@@ -941,6 +950,19 @@ export class UI {
       else this.render();
       return;
     }
+    // Holding Play/Pause about a second: Sleep Mode, the way holding it
+    // switched the old iPod off (sleep.js; only when Sleep Mode isn't Off).
+    // The hold repeats while the thumb stays down; it fires once.
+    if (button === 'play') {
+      const now = performance.now();
+      if (!this.playHeld || now - this.playHeld.last > HOLD_REPEAT_MS * 3) this.playHeld = { from: now, done: false };
+      this.playHeld.last = now;
+      if (!this.playHeld.done && now - this.playHeld.from >= 700) {
+        this.playHeld.done = true;
+        window.dispatchEvent(new Event('fp-sleep'));
+      }
+      return;
+    }
     if (button !== 'next' && button !== 'prev') return;
     // Holding next/previous scrubs the song on Now Playing, opening it from
     // anywhere else, except on screens with their own hold (TV,
@@ -1015,6 +1037,8 @@ export class UI {
       { label: 'Shuffle Songs', select: (ui) => ui.shuffleSongs() },
     ];
     const nowPlaying = { label: 'Now Playing', arrow: true, select: (ui) => ui.push(new NowPlaying(p)) };
+    // Sleep Mode by hand (sleep.js), when it's on in Settings.
+    const sleepRow = { label: 'Sleep', select: () => window.dispatchEvent(new Event('fp-sleep')) };
     const list = this.homeList = new List('Fretzpod', { rows, split: true });
     // Speakers only shows up for accounts fretzpod-speakers allows (and only
     // if that optional service runs); speakers.js. Added when the answer comes back.
@@ -1037,6 +1061,10 @@ export class UI {
       const has = rows.includes(nowPlaying);
       if (p.playing && !has) rows.push(nowPlaying);
       if (!p.playing && has) rows.splice(rows.indexOf(nowPlaying), 1);
+      // Sleep sits after Shuffle Songs, before Now Playing.
+      const wantSleep = settings.get('sleepMode') !== 'off';
+      if (wantSleep && !rows.includes(sleepRow)) rows.splice(rows.findIndex((r) => r.label === 'Shuffle Songs') + 1, 0, sleepRow);
+      if (!wantSleep && rows.includes(sleepRow)) rows.splice(rows.indexOf(sleepRow), 1);
       list.total = rows.length;
       list.sel = Math.min(list.sel, rows.length - 1);
       render(view);
@@ -1569,6 +1597,7 @@ export class UI {
       opt('accent'),
       opt('screen'),
       opt('sleep'),
+      opt('sleepMode'),
       { label: 'In the car', arrow: true, select: (ui) => ui.push(ui.car()) },
       { label: 'About', arrow: true, select: (ui) => ui.push(ui.about()) },
       { label: 'Sign Out', arrow: true, select: (ui) => ui.push(ui.confirmSignOut()) },

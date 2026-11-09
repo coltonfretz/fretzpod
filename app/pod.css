@@ -791,3 +791,19 @@ body.asleep #wheel { opacity: .28; transition: opacity 1.2s; }
 :root[data-wheel="white"] #car { --car-label: #5f6268; }
 :root[data-wheel="black"] #car, :root[data-wheel="red"] #car, :root[data-wheel="blue"] #car,
 :root[data-wheel="green"] #car, :root[data-wheel="purple"] #car { --car-label: #f0f0f3; }
+
+/* ---------- Sleep Mode (sleep.js) ---------- */
+/* The whole phone screen black, only the time in dim gray, like a phone in
+   the moment before its screen shuts off. The time moves a little each
+   minute (sleep.js tickClock) so it doesn't burn in. */
+.clock {
+  position: fixed; inset: 0; z-index: 5000; background: #000;
+  display: flex; align-items: center; justify-content: center;
+  touch-action: none; cursor: none;
+}
+.clock[hidden] { display: none; }
+.clock-time {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: min(17vw, 28vh); font-weight: 300; letter-spacing: .02em; white-space: nowrap;
+  color: #3b3d42; transition: transform 2s ease;
+}
