@@ -697,6 +697,13 @@ export class UI {
 
   get top() { return this.stack[this.stack.length - 1]; }
 
+  // A screen the sleep screen may cover (sleep.js): menus, Now Playing and
+  // Search, not a game, TV or sign-in.
+  calm() {
+    const t = this.top;
+    return t instanceof List || t instanceof NowPlaying || t instanceof Search;
+  }
+
   reset(screen) {
     for (const s of this.stack) s.leave?.();
     this.stack = [screen];
@@ -1493,6 +1500,7 @@ export class UI {
     rows.push(
       opt('body'),
       opt('screen'),
+      opt('sleep'),
       { label: 'In the car', arrow: true, select: (ui) => ui.push(ui.car()) },
       { label: 'About', arrow: true, select: (ui) => ui.push(ui.about()) },
       { label: 'Sign Out', arrow: true, select: (ui) => ui.push(ui.confirmSignOut()) },

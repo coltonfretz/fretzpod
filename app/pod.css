@@ -702,3 +702,23 @@ canvas.game { flex: 1; width: 100%; height: 100%; display: block; }
 :root[data-screen="dark"] .car-pop { background: rgba(0, 0, 0, .5); }
 :root[data-screen="dark"] .car-pop-text { background: rgba(40, 42, 48, .95); }
 :root[data-screen="dark"] .car-row.sel { border-bottom-color: transparent; }
+
+/* ---------- sleep screen (sleep.js) ---------- */
+/* The album art on black over the whole screen, the wheel dimmed. It drifts
+   a little over a minute and a half, so a screen left on all night doesn't
+   hold the same picture in the same pixels. */
+.sleep { position: absolute; inset: 0; z-index: 20; background: #000; overflow: hidden; }
+.sleep-in {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.6cqh;
+  animation: sleep-drift 90s ease-in-out infinite alternate;
+}
+.sleep[hidden] { display: none; }
+.sleep-art { height: 62cqh; aspect-ratio: 1; object-fit: cover; box-shadow: 0 0 5cqh rgba(255, 255, 255, .07); }
+.sleep-art.missing { visibility: hidden; }
+.sleep-title, .sleep-artist { max-width: 86cqw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; }
+.sleep-title { color: #d8d9dd; font-weight: 700; font-size: 5.2cqh; }
+.sleep-artist { color: #8d9097; font-size: 4.6cqh; }
+@keyframes sleep-drift { from { transform: translate(-3cqw, -2cqh); } to { transform: translate(3cqw, 2cqh); } }
+#wheel { transition: opacity .3s; }
+body.asleep #wheel { opacity: .28; transition: opacity 1.2s; }

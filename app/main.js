@@ -10,6 +10,7 @@ import { CarMode } from './carmode.js';
 import { Output } from './speakers.js';
 import { log } from './util.js';
 import { applyBodyExtras } from './bodies.js';
+import { Sleep } from './sleep.js';
 
 const $ = (s) => document.querySelector(s);
 
@@ -49,16 +50,19 @@ const player = new Output(phone, { repeat: () => settings.get('repeat') });
 
 let ui = null;
 let car = null;
+let sleep = null;
 // Keys (and the iPod wheel, though car mode covers it) go to car mode while it shows.
 const target = () => (car && !car.root.hidden ? car : ui);
+// The touch that wakes the sleep screen only wakes it (sleep.js).
+const awake = () => !sleep?.swallow();
 const wheel = new Wheel($('#wheel'), $('#center'), {
-  turn: (dir) => target().turn(dir),
-  press: (b) => target().press(b),
-  hold: (b) => target().hold(b),
-  holdEnd: (b) => target().holdEnd(b),
+  turn: (dir) => awake() && target().turn(dir),
+  press: (b) => awake() && target().press(b),
+  hold: (b) => awake() && target().hold(b),
+  holdEnd: (b) => awake() && target().holdEnd(b),
   raw: () => target().raw?.() === true,
-  down: (b) => target().down?.(b),
-  up: (b) => target().up?.(b),
+  down: (b) => awake() && target().down?.(b),
+  up: (b) => awake() && target().up?.(b),
 }, {
   clicker: () => settings.get('clicker') === 'on',
   haptics: () => settings.get('haptics'),
@@ -139,6 +143,11 @@ window.addEventListener('fp-signin', applyOrientation);
 window.addEventListener('fp-signout', applyOrientation);
 window.addEventListener('resize', () => cf.resize());
 applyOrientation();
+
+sleep = new Sleep($('#screen'), player, {
+  calm: () => ui.calm() && !car.on && !document.body.classList.contains('cf-on'),
+});
+
 // Test hook for the dev server only (Claude's browser pane has no rotation).
 if (location.hostname === 'localhost') {
   window.fpDebug = {
@@ -148,6 +157,7 @@ if (location.hostname === 'localhost') {
     ui: () => ui,
     // Tiki Golf: fpDebug.golf().startHole(6) jumps to hole 7.
     golf() { return ui.top; },
+    sleep: () => sleep,
   };
 }
 

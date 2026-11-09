@@ -24,6 +24,11 @@ const DEFS = {
     label: 'Screen', values: ['light', 'dark', 'night', 'phone'],
     names: { light: 'Light', dark: 'Dark', night: 'At Night', phone: 'Match Phone' }, def: 'light',
   },
+  // How long with no input, while music plays, before the sleep screen (sleep.js).
+  sleep: {
+    label: 'Sleep Screen', values: ['off', 's30', 'm2'],
+    names: { off: 'Off', s30: '30 Seconds', m2: '2 Minutes' }, def: 'off',
+  },
   // The gold bodies and the clear case are prizes from the games (bodies.js):
   // they're only offered once open.
   body: {

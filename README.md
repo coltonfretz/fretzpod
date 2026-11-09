@@ -24,6 +24,7 @@ Inspired by the iPod Classic. Not affiliated with or endorsed by Apple.
   <img src="screenshots/car-mode-sideways.webp" alt="Car Mode in Android split screen with the phone sideways: Google Maps on the left, Fretzpod on the right" width="440">
 
 - **Dark screen:** Settings -> Screen: Light, Dark, At Night (dark from 8 PM to 7 AM) or Match Phone. Car Mode follows it too.
+- **Sleep screen:** Settings -> Sleep Screen: after 30 seconds or 2 minutes with no input while music plays, the screen shows just the album art on black and the wheel dims. The first touch only wakes it. (The phone's own screen timeout still applies.)
 - **Body colors:** silver, black, blue, red, purple. Plus prizes: a gold body for a huge lifetime total in each game, with that game's symbol pressed into the corner, and a clear case showing the insides for all three.
 - **Private:** no play reporting to Jellyfin, no access log, no analytics, nothing loaded from outside your server. See DESIGN.md, "Privacy".
 
@@ -106,6 +107,7 @@ It asks for a Jellyfin admin API key (only to make its own key) and a Home Assis
 | `app/api.js`, `app/config.js` | Jellyfin calls and sign-in; the site settings (replaced by the build). |
 | `app/pinball.js`, `app/fishing.js`, `app/golf.js`, `app/pause.js`, `app/scores.js` | The games, their shared pause menu and the high score boards. |
 | `app/bodies.js` | The prize bodies: gold per game and the clear case. |
+| `app/sleep.js` | The sleep screen. |
 | `app/tv.js`, `app/speakers.js` | The optional TV and Speakers. |
 | `app/vendor/` | hls.js 1.7.3 (for TV), Apache 2.0. |
 | `nginx/default.conf` | nginx config template with the Content Security Policy. |
