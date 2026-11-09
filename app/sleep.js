@@ -8,31 +8,38 @@
 // only the time on it in dim gray, the way a phone looks in the moment before
 // its screen shuts off, and stays like that (a nightstand clock). The music
 // keeps playing. By hand: hold Play/Pause (like switching the old iPod off)
-// or pick Sleep in the main menu. At Night: also on its own from 10 PM to
-// 7 AM after a minute with no input.
+// or pick Sleep in the main menu. Scheduled: also on its own between the
+// Starts and Ends times in Settings > Sleep Mode, after a minute with no input.
 //
 // Any touch or key wakes either one, and that first touch only wakes it (it
 // doesn't also scroll or press anything).
 //
 // WHY a wake lock: the phone's own screen timeout would turn the screen off
 // long before a clock is any use (and it did, mid-lyrics, Colton 2026-11-09).
-// The screen is kept on while Sleep Mode shows, through the night hours with
-// At Night, and while the lyrics are up. Browsers only allow it on https, so
+// The screen is kept on while Sleep Mode shows, through the scheduled hours,
+// and while the lyrics are up. Browsers only allow it on https, so
 // the home http copy still times out.
 //
 // WHY only on calm screens: menus and Now Playing are fine to cover, but a
 // game, TV, Car Mode, Cover Flow sideways or lyrics being read are not.
 import * as api from './api.js';
-import { settings } from './settings.js';
+import { settings, minutesOf } from './settings.js';
 import { el, log } from './util.js';
 
 const ART_AFTER = { s30: 30e3, m2: 120e3 };
-const CLOCK_AFTER = 60e3;           // At Night: a minute with no input
-const NIGHT_FROM = 22;              // 10 PM
-const NIGHT_TO = 7;                 // 7 AM
+const CLOCK_AFTER = 60e3;           // Scheduled: a minute with no input
 const CLOCK_MOVE_MS = 60e3;         // the time moves a little each minute (burn-in)
 
-const atNight = () => { const h = new Date().getHours(); return h >= NIGHT_FROM || h < NIGHT_TO; };
+// Inside the Starts-Ends hours (Settings > Sleep Mode). Hours that cross
+// midnight (10 PM to 7 AM) wrap; Starts equal to Ends means never.
+function scheduled() {
+  if (settings.get('sleepMode') !== 'night') return false;
+  const d = new Date();
+  const now = d.getHours() * 60 + d.getMinutes();
+  const from = minutesOf(settings.get('sleepFrom'));
+  const to = minutesOf(settings.get('sleepTo'));
+  return from < to ? now >= from && now < to : from > to && (now >= from || now < to);
+}
 
 export class Sleep {
   // screenEl: #screen. hooks.calm(): the screen showing may be covered
@@ -106,7 +113,7 @@ export class Sleep {
     if (this.clockOn) { this.tickClock(); return; }
     if (document.hidden || !this.hooks.calm()) { this.last = Date.now(); return; }
     const idle = Date.now() - this.last;
-    if (settings.get('sleepMode') === 'night' && atNight() && idle >= CLOCK_AFTER) { this.showClock(); return; }
+    if (scheduled() && idle >= CLOCK_AFTER) { this.showClock(); return; }
     const p = this.player;
     const after = ART_AFTER[settings.get('sleep')];
     if (!this.asleep && after && p.playing && !p.paused && idle >= after) this.sleep();
@@ -134,7 +141,7 @@ export class Sleep {
 
   // ---------- Sleep Mode ----------
 
-  // Hold Play/Pause or Sleep in the main menu (main.js), or At Night on its own.
+  // Hold Play/Pause or Sleep in the main menu (main.js), or on its own when Scheduled.
   showClock() {
     if (this.clockOn || settings.get('sleepMode') === 'off') return;
     this.clockOn = true;
@@ -173,7 +180,7 @@ export class Sleep {
   }
 
   async syncLock() {
-    const night = settings.get('sleepMode') === 'night' && atNight() && this.hooks.calm();
+    const night = scheduled() && this.hooks.calm();
     const want = !document.hidden && (this.clockOn || night || this.hooks.reading());
     if (!want) {
       if (this.lock) { this.lock.release().catch(() => {}); this.lock = null; }

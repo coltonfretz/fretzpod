@@ -730,6 +730,37 @@ class CoverFlowScreen {
   leave() { this.cf.hide(); }
 }
 
+// Setting a time with the wheel, like the iPod's alarm clock: a quarter
+// hour per tick, center saves, MENU leaves it as it was. key: a setting whose
+// values are quarter hours (settings.js quarterHours).
+class TimePicker {
+  constructor(title, key) {
+    this.title = title;
+    this.key = key;
+    this.values = settings.defs[key].values;
+    this.i = this.values.indexOf(settings.get(key));
+  }
+
+  attach(ui) { this.ui = ui; }
+
+  turn(dir) {
+    this.i = (this.i + dir + this.values.length) % this.values.length;
+    return true;
+  }
+
+  select(ui) {
+    settings.set(this.key, this.values[this.i]);
+    ui.back();
+  }
+
+  render(view) {
+    view.classList.remove('split');
+    const box = el('div', 'tp');
+    box.append(el('div', 'tp-time', settings.defs[this.key].names[this.values[this.i]]));
+    view.replaceChildren(box);
+  }
+}
+
 // ---------- the screen stack ----------
 
 export class UI {
@@ -1597,12 +1628,26 @@ export class UI {
       opt('accent'),
       opt('screen'),
       opt('sleep'),
-      opt('sleepMode'),
+      { label: 'Sleep Mode', value: () => settings.name('sleepMode'), arrow: true, select: (ui) => ui.push(ui.sleepMenu(opt)) },
       { label: 'In the car', arrow: true, select: (ui) => ui.push(ui.car()) },
       { label: 'About', arrow: true, select: (ui) => ui.push(ui.about()) },
       { label: 'Sign Out', arrow: true, select: (ui) => ui.push(ui.confirmSignOut()) },
     );
     return new List('Settings', { rows });
+  }
+
+  // Settings > Sleep Mode (sleep.js): Off, By Hand or Scheduled, and the hours
+  // for Scheduled. A time row opens the picker (TimePicker); ⏮/⏭ on it step
+  // a quarter hour without opening it.
+  sleepMenu(opt) {
+    const time = (k) => ({
+      ...opt(k),
+      arrow: true,
+      select: (ui) => ui.push(new TimePicker(settings.defs[k].label, k)),
+    });
+    return new List('Sleep Mode', {
+      rows: [{ ...opt('sleepMode'), label: 'Mode' }, time('sleepFrom'), time('sleepTo')],
+    });
   }
 
   // Settings > Wheel: on a prize body it says so instead of a color, since

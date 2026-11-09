@@ -807,3 +807,10 @@ body.asleep #wheel { opacity: .28; transition: opacity 1.2s; }
   font-size: min(17vw, 28vh); font-weight: 300; letter-spacing: .02em; white-space: nowrap;
   color: #3b3d42; transition: transform 2s ease;
 }
+
+/* ---------- time picker (ui.js TimePicker, Settings > Sleep Mode) ---------- */
+.tp { flex: 1; display: grid; place-items: center; }
+.tp-time {
+  font-size: 15cqh; font-weight: 700; padding: 1cqh 4cqw; border-radius: 1.6cqh;
+  background: var(--sel); color: #fff;
+}

@@ -44,11 +44,16 @@ const DEFS = {
     names: { off: 'Off', s30: '30 Seconds', m2: '2 Minutes' }, def: 'off',
   },
   // Sleep Mode, the dim clock (sleep.js): by hand only (hold Play/Pause, or
-  // Sleep in the main menu), or also on its own at night.
+  // Sleep in the main menu), or also on its own between two times. Off by
+  // default. 'night' is the key for Scheduled (it was At Night, fixed hours,
+  // before 0.24.1); the hours are Starts and Ends below, set by the person
+  // (Colton works nights, 2026-11-09).
   sleepMode: {
     label: 'Sleep Mode', values: ['off', 'hand', 'night'],
-    names: { off: 'Off', hand: 'By Hand', night: 'At Night' }, def: 'off',
+    names: { off: 'Off', hand: 'By Hand', night: 'Scheduled' }, def: 'off',
   },
+  sleepFrom: { label: 'Starts', ...quarterHours(), def: '22:00' },
+  sleepTo: { label: 'Ends', ...quarterHours(), def: '07:00' },
   // The gold bodies and the clear case are prizes from the games (bodies.js):
   // they're only offered once open.
   body: {
@@ -60,6 +65,23 @@ const DEFS = {
     def: 'silver',
   },
 };
+
+// Every quarter hour of the day as a setting's values ('HH:MM', 24-hour, so
+// they sort and compare), shown in the phone's own clock style ("10:00 PM").
+// A function declaration, so DEFS above can use it before this line.
+function quarterHours() {
+  const values = [];
+  const names = {};
+  for (let m = 0; m < 1440; m += 15) {
+    const v = `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+    values.push(v);
+    names[v] = new Date(2000, 0, 1, Math.floor(m / 60), m % 60).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  }
+  return { values, names };
+}
+
+// Minutes after midnight for an 'HH:MM' value.
+export const minutesOf = (v) => Number(v.slice(0, 2)) * 60 + Number(v.slice(3));
 
 export const BITRATE = { high: 320000, saver: 128000 };
 
