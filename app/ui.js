@@ -197,6 +197,9 @@ class HoldMenu extends List {
 
   render(view) {
     this.under.render(view);
+    // A screen that keeps its page between renders (Now Playing) would keep
+    // the last box too; only one belongs on screen.
+    view.querySelectorAll(':scope > .hm, :scope > .hm-scrim').forEach((n) => n.remove());
     const box = el('div', 'hm');
     const body = el('div', 'hm-body');
     body.style.height = `${this.visible * 9.4}cqh`;
@@ -209,8 +212,9 @@ class HoldMenu extends List {
 // Now Playing, laid out like the 6th/7th-gen iPod Classic. The wheel is the
 // volume; the center button switches it to scrubbing through the song.
 //
-// Hold the center button to heart the song (a Jellyfin
-// favorite; a small heart on the art shows it), and swipe the screen
+// Hold the center button for the song's hold menu, the same one as in the
+// lists (Favorites, Instant Mix, Add to Playlist, Go to Artist/Album; a small
+// heart on the art shows a favorite), and swipe the screen
 // sideways to turn the art over to the lyrics, like a card. The screen stays
 // a display otherwise: nothing on it to tap.
 class NowPlaying {
@@ -281,19 +285,26 @@ class NowPlaying {
     this.settle(4000);
   }
 
-  // Hold center: heart the song, or un-heart it. Adding one that's already a
-  // favorite is harmless, so this doesn't wait for Jellyfin's answer on
-  // whether it is one.
+  // Hold center: the song's hold menu (UI.songMenu). It used to heart the
+  // song straight away; the menu has Favorites too, plus the rest (asked
+  // for 2026-11-09), so holding means the same thing everywhere.
   holdSelect() {
     const item = this.player.current;
     if (!item) return false;
+    this.ui.push(this.ui.songMenu(item, { np: this }));
+    return true;
+  }
+
+  // Favorites from the hold menu: the heart on the art changes right away
+  // and a big heart blooms, without waiting for Jellyfin.
+  setFav(on) {
+    const item = this.player.current;
+    if (!item) return;
     const was = this.fav.get(item.Id) === true;
-    const on = !was;
     this.fav.set(item.Id, on);
     this.pop(on);
     api.setFavorite(item.Id, on).then((now) => { this.fav.set(item.Id, now); this.ui.refresh(this); })
       .catch((e) => { log(`favorite: ${e.message}`); this.fav.set(item.Id, was); this.ui.refresh(this); });
-    return true;
   }
 
   // A big heart that blooms and fades over the screen.
@@ -1377,9 +1388,11 @@ export class UI {
   }
 
   // Play a list of songs starting at index i, then show Now Playing.
+  // Already on Now Playing (Instant Mix from its hold menu): stay on it
+  // rather than stacking a second one.
   playSongs(items, i) {
     this.player.play(items, i, { shuffle: settings.get('shuffle') === 'songs' });
-    this.push(new NowPlaying(this.player));
+    if (!(this.top instanceof NowPlaying)) this.push(new NowPlaying(this.player));
   }
 
   shuffleSongs() {
@@ -1431,22 +1444,32 @@ export class UI {
   // Playlist, Favorites, Go to Artist, Go to Album. Albums, artists and
   // playlists get the ones that make sense for a whole bunch of songs.
 
+  // ctx.np: opened on Now Playing for the song playing. Play Next and Play
+  // Later are left out there (it's already playing), and Favorites goes
+  // through Now Playing so its heart and bloom show it.
   songMenu(s, ctx = {}) {
     const one = () => Promise.resolve([s]);
-    const fav = { label: 'Add to Favorites', select: (ui) => ui.setFav(s, fav.on !== true) };
-    const rows = [...this.queueRows(one), this.mixRow(s.Id), this.playlistRow(one), fav];
+    const fav = {
+      label: 'Add to Favorites',
+      select: (ui) => {
+        if (!ctx.np) { ui.setFav(s, fav.on !== true); return; }
+        ui.closeMenus();
+        ctx.np.setFav(fav.on !== true);
+      },
+    };
+    const rows = [...(ctx.np ? [] : this.queueRows(one)), this.mixRow(s.Id), this.playlistRow(one), fav];
     const artist = s.AlbumArtists?.[0];
     if (artist?.Id && artist.Id !== ctx.artistId) rows.push(this.goRow('Go to Artist', (ui) => ui.artist(artist)));
     if (s.AlbumId && s.AlbumId !== ctx.albumId) {
       rows.push(this.goRow('Go to Album', (ui) => ui.album({ Id: s.AlbumId, Name: s.Album || 'Album' })));
     }
     const menu = new HoldMenu(s.Name, { rows });
-    // Lists load without favorites (faster), so ask now, while the menu is up.
-    api.isFavorite(s.Id).then((on) => {
-      fav.on = on;
-      fav.label = on ? 'Remove from Favorites' : 'Add to Favorites';
-      this.refresh(menu);
-    }).catch(() => {});
+    const show = (on) => { fav.on = on; fav.label = on ? 'Remove from Favorites' : 'Add to Favorites'; };
+    // Now Playing already knows; lists load without favorites (faster), so
+    // ask now, while the menu is up.
+    const known = ctx.np?.fav.get(s.Id);
+    if (known === true || known === false) show(known);
+    else api.isFavorite(s.Id).then((on) => { show(on); this.refresh(menu); }).catch(() => {});
     return menu;
   }
 
