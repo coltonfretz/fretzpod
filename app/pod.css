@@ -4,7 +4,12 @@
 
 /* ---------- body colors (Settings > Body) ---------- */
 /* The iPod's blue selection, shared by everything that highlights a pick. */
-:root { --sel: linear-gradient(#5aa7f3, #1d6cd0); }
+:root {
+  --sel: linear-gradient(#5aa7f3, #1d6cd0);
+  --acc-fill: linear-gradient(#80b8f3, #2869cb);       /* progress and volume bars */
+  --acc-thumb: linear-gradient(90deg, #6aa6ea, #2c6dc4); /* list scroll thumb */
+  --acc-ink: #1d6cd0;                                   /* caret, play state */
+}
 
 :root, :root[data-body="silver"] {
   --body-top: #eef0f2; --body-bot: #c2c5ca;
@@ -173,7 +178,7 @@ body {
 }
 .thumb {
   position: absolute; left: 0; right: 0;
-  background: linear-gradient(90deg, #6aa6ea, #2c6dc4);
+  background: var(--acc-thumb);
   border-radius: 1cqw;
 }
 
@@ -240,7 +245,7 @@ body {
   border: 1px solid #898c91; border-radius: 1px;
   background: linear-gradient(#f5f6f8, #d6d8dc);
 }
-.fill { height: 100%; background: linear-gradient(#80b8f3, #2869cb); }
+.fill { height: 100%; background: var(--acc-fill); }
 .knob {
   position: absolute; top: 50%; width: 3.2cqh; height: 3.2cqh;
   background: #fff; border: 1px solid #4c4e52;
@@ -439,7 +444,7 @@ body.cf-on #pod { display: none; }
   font-size: 6cqh; font-weight: 700;
 }
 .search-query .q { white-space: pre; overflow: hidden; }
-.caret { width: .5cqw; height: 6.5cqh; background: #1d6cd0; animation: blink 1s steps(1) infinite; }
+.caret { width: .5cqw; height: 6.5cqh; background: var(--acc-ink); animation: blink 1s steps(1) infinite; }
 .in-results .caret { visibility: hidden; }
 @keyframes blink { 50% { opacity: 0; } }
 .search-status { margin-left: auto; font-size: 4.2cqh; font-weight: 400; color: #77797e; white-space: nowrap; }
@@ -763,3 +768,26 @@ body.asleep #wheel { opacity: .28; transition: opacity 1.2s; }
 :root[data-screen="dark"] .cf-mini .cf-track { border-bottom-color: #2a2c31; }
 :root[data-screen="dark"] .cf-mini .cf-track .n { color: var(--d-dim); }
 :root[data-screen="dark"] .cf-mini .cf-track.sel .n, :root[data-screen="dark"] .cf-mini .cf-track.sel .t { color: #dde9ff; }
+
+/* ---------- Settings > Selection and Wheel (main.js applyBody) ---------- */
+/* Selection recolors the highlight and the bars that go with it, on every
+   body. Blue (the iPod's) is the default and sets nothing. */
+:root[data-accent="green"] { --sel: linear-gradient(#6cc96a, #2e8f35); --acc-fill: linear-gradient(#86d384, #36953c); --acc-thumb: linear-gradient(90deg, #74c972, #2e8f35); --acc-ink: #2e8f35; }
+:root[data-accent="purple"] { --sel: linear-gradient(#a08cff, #6243e0); --acc-fill: linear-gradient(#b3a3ff, #6a4ce6); --acc-thumb: linear-gradient(90deg, #a594ff, #6243e0); --acc-ink: #6243e0; }
+:root[data-accent="red"] { --sel: linear-gradient(#f2747a, #c4222c); --acc-fill: linear-gradient(#f48a8f, #c92a34); --acc-thumb: linear-gradient(90deg, #ef7c82, #c4222c); --acc-ink: #c4222c; }
+:root[data-accent="orange"] { --sel: linear-gradient(#f7ad5c, #d9700e); --acc-fill: linear-gradient(#f8bb76, #dd7814); --acc-thumb: linear-gradient(90deg, #f5b066, #d9700e); --acc-ink: #d9700e; }
+:root[data-accent="graphite"] { --sel: linear-gradient(#9a9ea6, #555960); --acc-fill: linear-gradient(#aeb2b9, #5d6168); --acc-thumb: linear-gradient(90deg, #a0a4ab, #555960); --acc-ink: #555960; }
+
+/* Wheel: a wheel color of its own instead of the body's. Not on the prize
+   bodies (gold, clear): their wheel is part of the prize, so main.js never
+   sets data-wheel on them. */
+:root[data-wheel="white"] { --wheel-hi: #ffffff; --wheel: #eeeff1; --wheel-edge: #c9ccd0; --center-hi: #f3f4f6; --center: #d6d8dc; --label: #9a9da3; }
+:root[data-wheel="black"] { --wheel-hi: #3a3a3e; --wheel: #26262a; --wheel-edge: #121214; --center-hi: #2b2b2f; --center: #18181b; --label: #c8c8cc; }
+:root[data-wheel="red"] { --wheel-hi: #c93a41; --wheel: #b3242c; --wheel-edge: #7d141a; --center-hi: #a32129; --center: #8e1a20; --label: #ffd9db; }
+:root[data-wheel="blue"] { --wheel-hi: #4277c9; --wheel: #2c5fb0; --wheel-edge: #1b3f7a; --center-hi: #2a59a3; --center: #1f4a8f; --label: #dbe8ff; }
+:root[data-wheel="green"] { --wheel-hi: #44955c; --wheel: #2f7d46; --wheel-edge: #1d5530; --center-hi: #2b6e3f; --center: #235f35; --label: #d9f2df; }
+:root[data-wheel="purple"] { --wheel-hi: #4b2a7e; --wheel: #34195b; --wheel-edge: #1c0d33; --center-hi: #3a1f65; --center: #241140; --label: #dccdff; }
+/* Car Mode's big wheel labels follow the wheel, not the body. */
+:root[data-wheel="white"] #car { --car-label: #5f6268; }
+:root[data-wheel="black"] #car, :root[data-wheel="red"] #car, :root[data-wheel="blue"] #car,
+:root[data-wheel="green"] #car, :root[data-wheel="purple"] #car { --car-label: #f0f0f3; }

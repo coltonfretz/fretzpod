@@ -1565,6 +1565,8 @@ export class UI {
     else rows.push({ label: 'Haptics', value: () => (firefox ? 'Not in Firefox' : 'Not supported') });
     rows.push(
       opt('body'),
+      this.wheelRow(opt('wheel')),
+      opt('accent'),
       opt('screen'),
       opt('sleep'),
       { label: 'In the car', arrow: true, select: (ui) => ui.push(ui.car()) },
@@ -1572,6 +1574,18 @@ export class UI {
       { label: 'Sign Out', arrow: true, select: (ui) => ui.push(ui.confirmSignOut()) },
     );
     return new List('Settings', { rows });
+  }
+
+  // Settings > Wheel: on a prize body it says so instead of a color, since
+  // the gold and clear wheels stay as they are (main.js applyBody).
+  wheelRow(row) {
+    const prize = () => { const b = settings.get('body'); return b.startsWith('gold') || b === 'clear'; };
+    return {
+      ...row,
+      value: () => (prize() ? 'Prize body' : row.value()),
+      select: (ui) => { if (!prize()) row.select(ui); },
+      step: (dir) => { if (!prize()) row.step(dir); },
+    };
   }
 
   // Android Auto and CarPlay only list apps built for car screens, which a

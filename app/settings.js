@@ -17,6 +17,18 @@ const DEFS = {
   // vibration motor). Older phones' motors need 20-30 ms just to spin up, so
   // Light can't be felt there at all; Strong is for them.
   haptics: { label: 'Haptics', values: ['light', 'strong', 'off'], names: { light: 'Light', strong: 'Strong', off: 'Off' }, def: 'light' },
+  // Wheel and Selection colors (pod.css, main.js applyBody). Matching / Blue
+  // are the body's own and the iPod's. Wheel is ignored on the prize bodies.
+  wheel: {
+    label: 'Wheel', values: ['body', 'white', 'black', 'red', 'blue', 'green', 'purple'],
+    names: { body: 'Matching', white: 'White', black: 'Black', red: 'Red', blue: 'Blue', green: 'Green', purple: site.purpleName },
+    def: 'body',
+  },
+  accent: {
+    label: 'Selection', values: ['blue', 'green', 'purple', 'red', 'orange', 'graphite'],
+    names: { blue: 'Blue', green: 'Green', purple: site.purpleName, red: 'Red', orange: 'Orange', graphite: 'Graphite' },
+    def: 'blue',
+  },
   // The screen's colors (main.js applyScreen, pod.css "dark screen"). At
   // Night: dark from 8 PM to 7 AM by the phone's clock. Match Phone follows
   // the phone's own dark mode (which may be on a schedule of its own).

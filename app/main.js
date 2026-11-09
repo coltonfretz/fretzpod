@@ -15,12 +15,19 @@ import { Sleep } from './sleep.js';
 const $ = (s) => document.querySelector(s);
 
 function applyBody() {
+  const root = document.documentElement;
   const body = settings.get('body');
-  document.documentElement.dataset.body = body;
+  root.dataset.body = body;
   applyBodyExtras(body);   // a gold body's emblem, the clear case's insides (bodies.js)
+  // Settings > Wheel, except on a prize body (gold, clear), whose wheel is
+  // part of the prize; Settings > Selection on every body (pod.css).
+  const wheel = settings.get('wheel');
+  if (wheel === 'body' || prizeBody(body)) delete root.dataset.wheel; else root.dataset.wheel = wheel;
+  root.dataset.accent = settings.get('accent');
 }
+const prizeBody = (b) => b.startsWith('gold') || b === 'clear';
 applyBody();
-window.addEventListener('fp-setting', (e) => { if (e.detail === 'body') applyBody(); });
+window.addEventListener('fp-setting', (e) => { if (['body', 'wheel', 'accent'].includes(e.detail)) applyBody(); });
 
 // Settings > Screen: light or dark menus (pod.css "dark screen").
 const NIGHT_FROM = 20;   // 8 PM
