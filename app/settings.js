@@ -17,6 +17,13 @@ const DEFS = {
   // vibration motor). Older phones' motors need 20-30 ms just to spin up, so
   // Light can't be felt there at all; Strong is for them.
   haptics: { label: 'Haptics', values: ['light', 'strong', 'off'], names: { light: 'Light', strong: 'Strong', off: 'Off' }, def: 'light' },
+  // The screen's colors (main.js applyScreen, pod.css "dark screen"). At
+  // Night: dark from 8 PM to 7 AM by the phone's clock. Match Phone follows
+  // the phone's own dark mode (which may be on a schedule of its own).
+  screen: {
+    label: 'Screen', values: ['light', 'dark', 'night', 'phone'],
+    names: { light: 'Light', dark: 'Dark', night: 'At Night', phone: 'Match Phone' }, def: 'light',
+  },
   // The gold bodies and the clear case are prizes from the games (bodies.js):
   // they're only offered once open.
   body: {

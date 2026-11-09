@@ -21,6 +21,24 @@ function applyBody() {
 applyBody();
 window.addEventListener('fp-setting', (e) => { if (e.detail === 'body') applyBody(); });
 
+// Settings > Screen: light or dark menus (pod.css "dark screen").
+const NIGHT_FROM = 20;   // 8 PM
+const NIGHT_TO = 7;      // 7 AM
+const phoneDark = matchMedia('(prefers-color-scheme: dark)');
+function applyScreen() {
+  const v = settings.get('screen');
+  const h = new Date().getHours();
+  const dark = v === 'dark' || (v === 'night' && (h >= NIGHT_FROM || h < NIGHT_TO)) || (v === 'phone' && phoneDark.matches);
+  document.documentElement.dataset.screen = dark ? 'dark' : 'light';
+}
+applyScreen();
+window.addEventListener('fp-setting', (e) => { if (e.detail === 'screen') applyScreen(); });
+phoneDark.addEventListener('change', applyScreen);
+// At Night turns over on the hour; a minute's check catches it, and a phone
+// waking from sleep fires visibilitychange before anyone looks.
+setInterval(applyScreen, 60000);
+document.addEventListener('visibilitychange', applyScreen);
+
 const phone = new Player($('#audio'), {
   bitrate: () => BITRATE[settings.get('quality')],
   repeat: () => settings.get('repeat'),

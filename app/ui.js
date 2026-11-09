@@ -1492,6 +1492,7 @@ export class UI {
     else rows.push({ label: 'Haptics', value: () => (firefox ? 'Not in Firefox' : 'Not supported') });
     rows.push(
       opt('body'),
+      opt('screen'),
       { label: 'In the car', arrow: true, select: (ui) => ui.push(ui.car()) },
       { label: 'About', arrow: true, select: (ui) => ui.push(ui.about()) },
       { label: 'Sign Out', arrow: true, select: (ui) => ui.push(ui.confirmSignOut()) },

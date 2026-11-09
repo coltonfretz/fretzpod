@@ -641,3 +641,64 @@ canvas.game { flex: 1; width: 100%; height: 100%; display: block; }
 }
 .car-pop-heart { font-size: 45cqh; line-height: 1; color: #ff3b5c; }
 .car-pop-text { font-size: min(8cqh, 6cqw); font-weight: 700; background: rgba(255,255,255,.95); padding: 1cqh 3cqw; border-radius: 1.5cqh; }
+
+/* ---------- dark screen (Settings > Screen) ---------- */
+/* main.js sets data-screen="dark" on <html> for Dark, for At Night between
+   8 PM and 7 AM, and for Match Phone when the phone is in dark mode. Only
+   the screens change: the body, the wheel, the games (drawn on canvas), TV
+   and Cover Flow (already dark) stay as they are. The blue selection stays
+   too; it reads fine on dark and it's the iPod's color. */
+:root[data-screen="dark"] {
+  --d-bg: #121316; --d-ink: #f2f3f5; --d-ink2: #c9ccd2; --d-dim: #9a9da4; --d-note: #a3a6ad;
+  --d-edge: #3a3c42; --d-bar: linear-gradient(#3a3c42, #222328); --d-panel: #1c1d21;
+  --d-track: linear-gradient(#2b2d33, #1d1e22);
+}
+:root[data-screen="dark"] #screen,
+:root[data-screen="dark"] .view { background: var(--d-bg); color: var(--d-ink); }
+:root[data-screen="dark"] .bar { background: var(--d-bar); border-bottom-color: #000; color: #e9eaee; }
+:root[data-screen="dark"] .bar-state { color: #6aa9ff; }
+:root[data-screen="dark"] .bar-batt { border-color: #b9bcc2; }
+:root[data-screen="dark"] .bar-batt::after { background: #b9bcc2; }
+:root[data-screen="dark"] .row .sub { color: var(--d-dim); }
+:root[data-screen="dark"] .row .value { color: #b5b8be; }
+:root[data-screen="dark"] .row.sel .sub, :root[data-screen="dark"] .row.sel .value { color: #dde9ff; }
+:root[data-screen="dark"] .note { color: var(--d-note); }
+:root[data-screen="dark"] .scroll { background: linear-gradient(90deg, #1d1e22, #2a2c31); border-left-color: var(--d-edge); }
+:root[data-screen="dark"] .art-pane { border-left-color: var(--d-edge); }
+/* Now Playing */
+:root[data-screen="dark"] .np-count { color: var(--d-ink2); }
+:root[data-screen="dark"] .np-art { background: #2a2b30; }
+:root[data-screen="dark"] .np-artist, :root[data-screen="dark"] .np-album { color: var(--d-ink2); }
+:root[data-screen="dark"] .np-heart { background: rgba(30, 31, 35, .94); }
+:root[data-screen="dark"] .np-pop-text { color: var(--d-ink); background: rgba(40, 42, 48, .92); }
+:root[data-screen="dark"] .meter { border-color: #5b5e65; background: var(--d-track); }
+:root[data-screen="dark"] .knob { background: #e9eaee; border-color: #111; }
+:root[data-screen="dark"] .np-lyrics .line,
+:root[data-screen="dark"] .np-lyrics .line.now.worded { color: #6f7279; }
+:root[data-screen="dark"] .np-lyrics .line.now,
+:root[data-screen="dark"] .np-lyrics .line.now.worded .w.sung { color: #fff; }
+/* Quick Connect, Search, the hold menu, name entry */
+:root[data-screen="dark"] .qc-code { color: #6aa9ff; }
+:root[data-screen="dark"] .search-query { border-bottom-color: #33353a; }
+:root[data-screen="dark"] .search-status { color: var(--d-dim); }
+:root[data-screen="dark"] .keys { border-top-color: var(--d-edge); background: linear-gradient(#26272c, #1b1c20); }
+:root[data-screen="dark"] .key { color: #d4d6db; }
+:root[data-screen="dark"] .key.on { color: #fff; }
+:root[data-screen="dark"] .hm { background: var(--d-panel); border-color: #45474e; }
+:root[data-screen="dark"] .hm-head { background: linear-gradient(#34363c, #26272c); border-bottom-color: #45474e; color: #d4d6db; }
+:root[data-screen="dark"] .ne-name { color: var(--d-ink); border-bottom-color: #4a4c52; }
+:root[data-screen="dark"] .ne-note { color: var(--d-note); }
+/* Car Mode: the screen half, so a dashboard isn't a white glare at night */
+:root[data-screen="dark"] .car-screen { background: var(--d-bg); color: var(--d-ink); }
+:root[data-screen="dark"] .car-bar { background: var(--d-bar); border-bottom-color: #000; color: #e9eaee; }
+:root[data-screen="dark"] .car-bar-state { color: #6aa9ff; }
+:root[data-screen="dark"] .car-bar-count { color: var(--d-ink2); }
+:root[data-screen="dark"] .car-artist { color: var(--d-ink2); }
+:root[data-screen="dark"] .car-album { color: var(--d-dim); }
+:root[data-screen="dark"] .car-heart { background: rgba(30, 31, 35, .94); }
+:root[data-screen="dark"] .car-row { border-bottom-color: #2a2c31; }
+:root[data-screen="dark"] .car-scroll { background: #1d1e22; border-left-color: var(--d-edge); }
+:root[data-screen="dark"] .car-note, :root[data-screen="dark"] .car-idle-hint { color: var(--d-note); }
+:root[data-screen="dark"] .car-pop { background: rgba(0, 0, 0, .5); }
+:root[data-screen="dark"] .car-pop-text { background: rgba(40, 42, 48, .95); }
+:root[data-screen="dark"] .car-row.sel { border-bottom-color: transparent; }

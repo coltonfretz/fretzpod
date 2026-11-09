@@ -23,6 +23,7 @@ Inspired by the iPod Classic. Not affiliated with or endorsed by Apple.
   <img src="screenshots/car-mode.webp" alt="Car Mode in Android split screen with the phone upright: Google Maps on top, Fretzpod's big Now Playing and four-button wheel below, purple body" width="180">
   <img src="screenshots/car-mode-sideways.webp" alt="Car Mode in Android split screen with the phone sideways: Google Maps on the left, Fretzpod on the right" width="440">
 
+- **Dark screen:** Settings -> Screen: Light, Dark, At Night (dark from 8 PM to 7 AM) or Match Phone. Car Mode follows it too.
 - **Body colors:** silver, black, blue, red, purple. Plus prizes: a gold body for a huge lifetime total in each game, with that game's symbol pressed into the corner, and a clear case showing the insides for all three.
 - **Private:** no play reporting to Jellyfin, no access log, no analytics, nothing loaded from outside your server. See DESIGN.md, "Privacy".
 
