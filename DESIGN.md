@@ -35,6 +35,7 @@ Why: tested on an Android phone with the screen off, every approach that started
 - One stream means one format, so Jellyfin transcodes every song to AAC (320k, or 128k on Data saver). Gapless playback comes free.
 - About 90 s is kept buffered ahead of the playhead and anything older than 60 s behind is trimmed, so memory stays small however long it plays.
 - Skip, previous and seeking far back restart the stream at the new spot (allowed, since they're user actions).
+- **Play Next** (the hold menu) can't just slot a song into the queue: the next song is usually already fetched and sitting in the stream. So songs already in the stream after the current one are dropped, their audio is cut off the end of the stream, and the new next song is appended in their place. The song playing is never touched, so there's no gap. Chrome refuses to move where the next append lands while its parser is mid-song, so the parser is reset first.
 - Lock screen and notification controls through the Media Session API.
 - **Basic mode** is the last resort for browsers with no usable Media Source: a plain `<audio>` per song. It works anywhere, but on Android the music may stop between songs with the screen off.
 - Lyrics from Jellyfin when it has them. Timed lyrics follow the song (word by word or line by line); untimed ones are a page you scroll with your finger, since an even pace through them is a guess. Nothing fetched from outside.
@@ -93,6 +94,7 @@ Sonos --PUBLIC_BASE/speakers/audio/<signed link>--> nginx --> fretzpod-speakers 
 - **Signed song links, not keys.** A Sonos downloads songs itself, and Home Assistant's history stores every address a speaker played. So the speakers only ever get links like `/speakers/audio/<song>.<mode>.<expiry>.<signature>.flac`: one song, 12 hours, useless for anything else.
 - Original files where Sonos can play them (MP3, AAC, FLAC up to 48 kHz), with byte ranges so the speaker can seek. Anything else is converted to 320k MP3.
 - Speaker state is read from the speaker itself over UPnP, because Home Assistant's copy can run about 30 s stale when the speakers can't push events back to it. Commands still go through Home Assistant.
+- **Play Next on a speaker** goes into the speaker's queue right after the song playing, by asking the speaker where it is and adding at exact positions over UPnP. Home Assistant's own "play next" works from its stale copy, so near a song change it would land a song off.
 - **Grouping from elsewhere.** Home Assistant (or the Sonos app) can add or drop a speaker too. The helper reports which speaker each one follows, so the app keeps its "Living Room + Sunroom" name right. When the lead speaker leaves a group, Sonos hands its queue and spot to a speaker that stays, mid-song; the app notices the lead went quiet while another speaker plays its songs, and follows the music there. Dropping the lead from the Speakers menu works the same way, so neither path restarts the song.
 - On my setup the speakers sit on a separate network that must never reach into the server's, so `PUBLIC_BASE` is Fretzpod's public https address and songs come in from outside like any visitor.
 

@@ -115,6 +115,14 @@ class List {
     this.rows[this.sel]?.select?.(ui, this.sel);
   }
 
+  // Hold center on a song, album, artist or playlist: its menu (HoldMenu).
+  holdSelect() {
+    const r = this.rows[this.sel];
+    if (!r?.menu) return false;
+    this.ui.push(r.menu());
+    return true;
+  }
+
   // A row with a step (Settings rows) takes ⏮/⏭; otherwise they're the
   // music's previous and next as usual.
   prev() { return this.step(-1); }
@@ -161,6 +169,39 @@ class List {
       view.append(bar);
     }
     if (this.split) view.append(this.ui.artPane);
+  }
+}
+
+// The hold menu: what can be done with a song, album, artist or playlist
+// (UI.songMenu and the rest build the rows), in a box over the list it was
+// held on. The list stays in sight behind it so it's clear what the menu is
+// about. MENU closes it; a menu opened from it (Add to Playlist) sits in the
+// same spot, and MENU goes back to the first.
+const MENU_ROWS = 6;
+class HoldMenu extends List {
+  constructor(head, opts) {
+    super('', { ...opts, visible: Math.min(MENU_ROWS, opts.rows?.length || MENU_ROWS) });
+    this.head = head;
+    this.overlay = true;      // UI.push / leaveTop: no slide
+  }
+
+  attach(ui) {
+    if (!this.under) {
+      const below = ui.stack[ui.stack.length - 2];
+      this.under = below.overlay ? below.under : below;
+      this.title = this.under.title;
+    }
+    super.attach(ui);
+  }
+
+  render(view) {
+    this.under.render(view);
+    const box = el('div', 'hm');
+    const body = el('div', 'hm-body');
+    body.style.height = `${this.visible * 9.4}cqh`;
+    super.render(body);
+    box.append(el('div', 'hm-head', this.head), body);
+    view.append(el('div', 'hm-scrim'), box);
   }
 }
 
@@ -548,6 +589,8 @@ class Search {
     this.schedule();
   }
 
+  holdSelect() { return this.focus === 'results' && this.results.holdSelect(); }
+
   // ⏭ is a shortcut into the results, like scrolling to Done.
   next() { if (this.focus === 'keys') { this.enterResults(); return true; } return false; }
 
@@ -584,9 +627,11 @@ class Search {
       if (ctrl.signal.aborted) return;
       const ui = this.ui;
       const rows = [
-        ...r.artists.map((a) => ({ label: a.Name, sub: 'Artist', arrow: true, select: (u) => u.push(u.artist(a)) })),
+        ...r.artists.map((a) => ({ ...ui.artistRow(a), sub: 'Artist' })),
         ...r.albums.map((a) => ({ ...ui.albumRow(a), sub: `Album · ${a.AlbumArtist || ''}` })),
-        ...r.songs.map((s, i) => ({ label: s.Name, sub: s.AlbumArtist || '', select: (u) => u.playSongs(r.songs, i) })),
+        ...r.songs.map((s, i) => ({
+          label: s.Name, sub: s.AlbumArtist || '', select: (u) => u.playSongs(r.songs, i), menu: () => ui.songMenu(s),
+        })),
       ];
       this.results.rows = rows;
       this.results.total = rows.length;
@@ -634,7 +679,8 @@ export class UI {
     this.stateEl = screenEl.querySelector('.bar-state');
     this.views = screenEl.querySelector('.views');
     this.letterEl = el('div', 'letter');
-    screenEl.append(this.letterEl);
+    this.toastEl = el('div', 'toast');
+    screenEl.append(this.letterEl, this.toastEl);
     this.view = el('div', 'view');
     this.views.append(this.view);
     this.artPane = this.makeArtPane();
@@ -661,7 +707,7 @@ export class UI {
   push(screen) {
     this.stack.push(screen);
     screen.attach(this);
-    this.slide(1);
+    if (screen.overlay) this.render(); else this.slide(1);
   }
 
   back() {
@@ -675,7 +721,22 @@ export class UI {
     if (this.stack.length < 2) return;
     const s = this.stack.pop();
     s.leave?.();
-    this.slide(-1);
+    if (s.overlay) this.render(); else this.slide(-1);
+  }
+
+  // Shuts every hold menu that's open (after picking something in one).
+  closeMenus() {
+    let shut = false;
+    while (this.top?.overlay) { this.stack.pop(); shut = true; }
+    if (shut) this.render();
+  }
+
+  // A short note over the screen ("Playing Next"), gone after a moment.
+  toast(text) {
+    this.toastEl.textContent = text;
+    this.toastEl.classList.add('on');
+    clearTimeout(this.toastTimer);
+    this.toastTimer = setTimeout(() => this.toastEl.classList.remove('on'), 1600);
   }
 
   // The iPod's sideways slide: new screens come in from the right, MENU goes
@@ -1190,27 +1251,149 @@ export class UI {
     }).catch((e) => log(`shuffle: ${e.message}`));
   }
 
-  songRows(items, withArtist = true) {
+  // ctx: where the list is ({albumId} inside an album, {artistId} under an
+  // artist), so the hold menu leaves out "Go to" the place you're already in.
+  songRows(items, withArtist = true, ctx = {}) {
     return items.map((s) => ({
       label: s.Name,
       sub: withArtist ? api.artistOf(s) : '',
       select: (ui, i) => ui.playSongs(items, i),
+      menu: () => this.songMenu(s, ctx),
     }));
   }
 
   // A list that loads all its songs at once (albums, playlists, an artist).
-  songList(title, load, withArtist, empty = 'No songs') {
+  songList(title, load, withArtist, empty = 'No songs', ctx = {}) {
     return new List(title, {
       empty,
-      fetch: () => load().then((d) => ({ rows: this.songRows(d.Items, withArtist), total: d.Items.length })),
+      fetch: () => load().then((d) => ({ rows: this.songRows(d.Items, withArtist, ctx), total: d.Items.length })),
     });
   }
 
-  albumRow(a) {
+  albumRow(a, ctx = {}) {
     return {
       label: a.Name, sub: a.AlbumArtist || '', arrow: true,
-      select: (ui) => ui.push(ui.songList(a.Name, () => api.albumSongs(a.Id), false)),
+      select: (ui) => ui.push(ui.album(a, ctx)),
+      menu: () => this.albumMenu(a, ctx),
     };
+  }
+
+  album(a, ctx = {}) {
+    return this.songList(a.Name, () => api.albumSongs(a.Id), false, undefined, { ...ctx, albumId: a.Id });
+  }
+
+  artistRow(a) {
+    return { label: a.Name, arrow: true, select: (ui) => ui.push(ui.artist(a)), menu: () => this.artistMenu(a) };
+  }
+
+  // ---------- the hold menu (HoldMenu) ----------
+  //
+  // Hold center on a song: Play Next, Play Later, Instant Mix, Add to
+  // Playlist, Favorites, Go to Artist, Go to Album. Albums, artists and
+  // playlists get the ones that make sense for a whole bunch of songs.
+
+  songMenu(s, ctx = {}) {
+    const one = () => Promise.resolve([s]);
+    const fav = { label: 'Add to Favorites', select: (ui) => ui.setFav(s, fav.on !== true) };
+    const rows = [...this.queueRows(one), this.mixRow(s.Id), this.playlistRow(one), fav];
+    const artist = s.AlbumArtists?.[0];
+    if (artist?.Id && artist.Id !== ctx.artistId) rows.push(this.goRow('Go to Artist', (ui) => ui.artist(artist)));
+    if (s.AlbumId && s.AlbumId !== ctx.albumId) {
+      rows.push(this.goRow('Go to Album', (ui) => ui.album({ Id: s.AlbumId, Name: s.Album || 'Album' })));
+    }
+    const menu = new HoldMenu(s.Name, { rows });
+    // Lists load without favorites (faster), so ask now, while the menu is up.
+    api.isFavorite(s.Id).then((on) => {
+      fav.on = on;
+      fav.label = on ? 'Remove from Favorites' : 'Add to Favorites';
+      this.refresh(menu);
+    }).catch(() => {});
+    return menu;
+  }
+
+  albumMenu(a, ctx = {}) {
+    const songs = () => api.albumSongs(a.Id).then((d) => d.Items);
+    const rows = [...this.queueRows(songs), this.mixRow(a.Id), this.playlistRow(songs)];
+    const artist = a.AlbumArtists?.[0];
+    if (artist?.Id && artist.Id !== ctx.artistId) rows.push(this.goRow('Go to Artist', (ui) => ui.artist(artist)));
+    return new HoldMenu(a.Name, { rows });
+  }
+
+  artistMenu(a) {
+    const songs = () => api.artistSongs(a.Id).then((d) => d.Items);
+    return new HoldMenu(a.Name, { rows: [...this.queueRows(songs), this.mixRow(a.Id)] });
+  }
+
+  playlistMenu(pl) {
+    const songs = () => api.playlistSongs(pl.Id).then((d) => d.Items);
+    return new HoldMenu(pl.Name, { rows: this.queueRows(songs) });
+  }
+
+  // Play Next / Play Later. With nothing playing, both just play the songs.
+  // The menu shuts right away; loading an album's songs can take a moment.
+  queueRows(load) {
+    const row = (label, how, note) => ({
+      label,
+      select: (ui) => {
+        ui.closeMenus();
+        load().then((items) => {
+          if (!items.length) return;
+          if (!ui.player.playing) { ui.playSongs(items, 0); return; }
+          ui.player[how](items);
+          ui.toast(note);
+        }).catch((e) => { log(`${how}: ${e.message}`); ui.toast("Couldn't load the songs"); });
+      },
+    });
+    return [row('Play Next', 'playNext', 'Playing Next'), row('Play Later', 'playLater', 'Playing Later')];
+  }
+
+  // Jellyfin's Instant Mix: songs like this one, played right away.
+  mixRow(id) {
+    return {
+      label: 'Instant Mix',
+      select: (ui) => {
+        ui.closeMenus();
+        api.instantMix(id).then((d) => {
+          if (d.Items.length) ui.playSongs(d.Items, 0); else ui.toast('No mix for this one');
+        }).catch((e) => { log(`instant mix: ${e.message}`); ui.toast("Couldn't make a mix"); });
+      },
+    };
+  }
+
+  // Add to Playlist: the person's playlists, in the same box.
+  playlistRow(load) {
+    return {
+      label: 'Add to Playlist', arrow: true,
+      select: (ui) => ui.push(new HoldMenu('Add to Playlist', {
+        empty: 'No playlists',
+        fetch: () => api.playlists().then((d) => ({
+          rows: d.Items.map((pl) => ({
+            label: pl.Name,
+            select: (u) => {
+              u.closeMenus();
+              load().then((items) => api.addToPlaylist(pl.Id, items.map((x) => x.Id)))
+                .then(() => u.toast(`Added to ${pl.Name}`))
+                .catch((e) => {
+                  log(`add to playlist: ${e.message}`);
+                  u.toast(/^403 /.test(e.message) ? "That playlist isn't yours to change" : "Couldn't add it");
+                });
+            },
+          })),
+          total: d.Items.length,
+        })),
+      })),
+    };
+  }
+
+  goRow(label, make) {
+    return { label, arrow: true, select: (ui) => { ui.closeMenus(); ui.push(make(ui)); } };
+  }
+
+  setFav(item, on) {
+    this.closeMenus();
+    api.setFavorite(item.Id, on)
+      .then(() => this.toast(on ? 'Added to Favorites' : 'Removed from Favorites'))
+      .catch((e) => { log(`favorite: ${e.message}`); this.toast("Couldn't change Favorites"); });
   }
 
   // Songs hearted on Now Playing (or in any Jellyfin app).
@@ -1223,6 +1406,7 @@ export class UI {
         rows: d.Items.map((pl) => ({
           label: pl.Name, arrow: true,
           select: (ui) => ui.push(ui.songList(pl.Name, () => api.playlistSongs(pl.Id), true)),
+          menu: () => this.playlistMenu(pl),
         })),
         total: d.Items.length,
       })),
@@ -1233,7 +1417,7 @@ export class UI {
     return new List('Artists', {
       letters: api.artistLetters,
       fetch: (start, n) => api.albumArtists(start, n).then((d) => ({
-        rows: d.Items.map((a) => ({ label: a.Name, arrow: true, select: (ui) => ui.push(ui.artist(a)) })),
+        rows: d.Items.map((a) => this.artistRow(a)),
         total: d.TotalRecordCount,
       })),
     });
@@ -1244,8 +1428,11 @@ export class UI {
       fetch: () => api.artistAlbums(a.Id).then((d) => {
         const rows = [{
           label: 'All Songs', arrow: true,
-          select: (ui) => ui.push(ui.songList(a.Name, () => api.artistSongs(a.Id), false)),
-        }, ...d.Items.map((al) => ({ ...this.albumRow(al), sub: al.ProductionYear ? String(al.ProductionYear) : '' }))];
+          select: (ui) => ui.push(ui.songList(a.Name, () => api.artistSongs(a.Id), false, undefined, { artistId: a.Id })),
+          menu: () => this.artistMenu(a),
+        }, ...d.Items.map((al) => ({
+          ...this.albumRow(al, { artistId: a.Id }), sub: al.ProductionYear ? String(al.ProductionYear) : '',
+        }))];
         return { rows, total: rows.length };
       }),
     });
@@ -1265,6 +1452,7 @@ export class UI {
         rows: d.Items.map((s, j) => ({
           label: s.Name, sub: s.AlbumArtist || '',
           select: (ui) => api.songs(start + j, 200).then((r) => ui.playSongs(r.Items, 0)).catch((e) => log(`songs: ${e.message}`)),
+          menu: () => this.songMenu(s),
         })),
         total: d.TotalRecordCount,
       })),

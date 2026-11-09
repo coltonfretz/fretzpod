@@ -4,7 +4,7 @@
 import { store, newId, log, clearLog } from './util.js';
 import site from './config.js';
 
-export const VERSION = '0.18.1';
+export const VERSION = '0.19.0';
 
 // Which Jellyfin this copy talks to comes from the site settings
 // (config.js, written by build.py from site/site.json): by the address the
@@ -293,5 +293,17 @@ export const isFavorite = (id) =>
 export const setFavorite = (id, on) =>
   request(`/UserFavoriteItems/${id}?` + qs({ userId: session.userId }), { method: on ? 'POST' : 'DELETE' })
     .then((d) => (d ? !!d.IsFavorite : on));
+// ---------- the hold menu (ui.js) ----------
+
+// Instant Mix: Jellyfin's own "songs like this one", from a song, an album or
+// an artist (its genres, the artist, similar artists).
+export const instantMix = (id) => request(`/Items/${id}/InstantMix?` + qs({
+  userId: session.userId, Limit: 100, EnableUserData: 'false', ImageTypeLimit: '1', EnableImageTypes: 'Primary',
+}));
+// Fails with 403 on a playlist this account can only look at (someone
+// else's, shared without editing).
+export const addToPlaylist = (playlistId, ids) =>
+  request(`/Playlists/${playlistId}/Items?` + qs({ userId: session.userId, ids: ids.join(',') }), { method: 'POST' });
+
 export const favoriteSongs = () =>
   items({ IncludeItemTypes: 'Audio', Filters: 'IsFavorite', SortBy: 'SortName', Limit: 3000 });

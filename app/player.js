@@ -133,6 +133,50 @@ export class Player extends Emitter {
     else this.el.pause();
   }
 
+  // The hold menu's Play Next (ui.js): songs go in right after the one
+  // playing. Nothing playing: they just play.
+  //
+  // WHY the stream needs rewinding: the next song is fetched as soon as the
+  // current one is all in, so its audio usually sits in the stream already.
+  // Those later segments get dropped (and their audio cut off the end of the
+  // stream), and pump() then fetches the new next song in their place. The
+  // song playing is never touched, so there's no gap or restart.
+  playNext(items) {
+    if (!this.playing) { this.play(items, 0); return; }
+    const s = this.s;
+    let k = Math.max(s.cur, 0) + 1;          // first segment after the one heard
+    // The next song is already a second from starting: it counts as playing,
+    // and the new songs go after it.
+    const nx = s.segs[k];
+    if (nx?.start !== undefined && this.el.currentTime >= nx.start - 1.5) k++;
+    const at = (s.segs[k - 1]?.qi ?? this.index) + 1;
+    this.queue.splice(at, 0, ...items);
+    if (s.basic) return;                     // finished() picks the next song when this one ends
+    const drop = s.segs.splice(k);
+    if (!drop.length) { this.reopen(); return; }
+    for (const d of drop) d.dropped = true;
+    s.chunks = s.chunks.filter((c) => !c.seg.dropped);
+    if (s.fetching) { s.abort?.abort(); s.fetching = false; }
+    // Audio already appended for them comes off the end; pump() does it once
+    // the buffer is free, then lines the next append up where it started.
+    if (drop[0].start !== undefined) s.trimFrom = drop[0].start;
+    this.reopen();
+  }
+
+  // Play Later: on the end of the queue.
+  playLater(items) {
+    if (!this.playing) { this.play(items, 0); return; }
+    this.queue.push(...items);
+    this.reopen();
+  }
+
+  // After the queue grew: a stream that had already ended (the last song is
+  // playing) takes more again, and pump() goes for the next song.
+  reopen() {
+    this.s.ended = false;
+    this.pump();
+  }
+
   async next() {
     if (!this.playing) return;
     let q = this.index + 1;
@@ -291,10 +335,31 @@ export class Player extends Emitter {
   // Runs after every append (updateend) and on the 1 s timer.
   pump() {
     const s = this.s;
-    if (!s.sb || s.sb.updating || s.ms.readyState !== 'open') return;
+    // 'ended' still takes appends (the queue grew after the last song went
+    // in; reopen()): the browser opens the stream again by itself.
+    if (!s.sb || s.sb.updating || s.ms.readyState === 'closed') return;
+    // Play Next dropped songs that were already in the stream (playNext):
+    // cut them off, then point the next append at the cut.
+    if (s.trimFrom !== undefined) {
+      const from = s.trimFrom;
+      s.trimFrom = undefined;
+      s.offsetAt = from;
+      try { s.sb.remove(from, Infinity); return; } catch (e) { log(`trim: ${e.name}`); }
+    }
+    if (s.offsetAt !== undefined) {
+      // In sequence mode this sets where the next song starts, for raw AAC
+      // and the MP4 wrapping alike. abort() first: the parser is still inside
+      // the dropped song's audio, and Chrome refuses a new offset mid-song
+      // (InvalidStateError, measured 2026-11-09); abort() drops the half-read
+      // bytes, which belong to the dropped song anyway.
+      try { s.sb.abort(); s.sb.timestampOffset = s.offsetAt; } catch (e) { log(`offset: ${e.name}`); }
+      s.offsetAt = undefined;
+    }
     const t = this.el.currentTime;
     const b = s.sb.buffered;
-    if (b.length && b.start(0) < t - KEEP_BEHIND - 5) { s.sb.remove(0, t - KEEP_BEHIND); return; }
+    // Only while open: a remove on an ended stream reopens it, and with
+    // s.ended already set nothing would end it again (no 'ended' event).
+    if (s.ms.readyState === 'open' && b.length && b.start(0) < t - KEEP_BEHIND - 5) { s.sb.remove(0, t - KEEP_BEHIND); return; }
     if (s.chunks.length) {
       if (this.bufferedEnd() - t > KEEP_AHEAD) return;
       const c = s.chunks.shift();
@@ -352,7 +417,8 @@ export class Player extends Emitter {
       const mux = streamType.mux ? new Mp4Muxer() : null;   // one per song
       for (;;) {
         const { done, value } = await reader.read();
-        if (gen !== this.gen) return;
+        // A song Play Next pushed out of the stream (playNext) stops here.
+        if (gen !== this.gen || seg.dropped) return;
         if (done) break;
         bytes += value.length;
         const data = mux ? mux.push(value) : value;
@@ -362,20 +428,20 @@ export class Player extends Emitter {
       }
       seg.done = true;
     } catch (e) {
-      if (gen !== this.gen || e.name === 'AbortError') return;
+      if (gen !== this.gen || seg.dropped || e.name === 'AbortError') return;
       // A retry would duplicate audio already appended, so only songs that
       // never started get retried; a song cut off midway just ends early.
       if (seg.start === undefined && bytes === 0 && attempt < RETRIES) {
         log(`fetching song ${qi + 1} failed (${e.message}), retrying`);
         s.fetching = false;
-        setTimeout(() => { if (gen === this.gen) this.fetchSeg(qi, offset, attempt + 1); }, 2000);
+        setTimeout(() => { if (gen === this.gen && !seg.dropped) this.fetchSeg(qi, offset, attempt + 1); }, 2000);
         return;
       }
       log(`gave up on song ${qi + 1}: ${e.message}`);
       seg.done = true;
       seg.failed = bytes === 0;
     }
-    if (gen === this.gen) { s.fetching = false; this.pump(); }
+    if (gen === this.gen && !seg.dropped) { s.fetching = false; this.pump(); }
   }
 
   // Notices the stream moving into the next song. Runs on the 1 s tick and on

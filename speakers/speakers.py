@@ -34,6 +34,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from xml.sax.saxutils import escape
 
 HA_URL = os.environ["HA_URL"].rstrip("/")
 HA_TOKEN = os.environ["HA_TOKEN"].strip()   # the token file ends in a newline
@@ -236,9 +237,51 @@ def play(speaker, ids, start, offset, alone=False):
     threading.Thread(target=_add_rest, args=(speaker, links[start + 1:], gen), daemon=True).start()
 
 
-def add(speaker, ids):
+def add(speaker, ids, after_current=False):
     gen = _gen.get(speaker, 0)
-    threading.Thread(target=_add_rest, args=(speaker, song_links(ids), gen), daemon=True).start()
+    links = song_links(ids)
+    if after_current:
+        threading.Thread(target=_add_next, args=(speaker, links, gen), daemon=True).start()
+        return
+    threading.Thread(target=_add_rest, args=(speaker, links, gen), daemon=True).start()
+
+
+# The DIDL-Lite SoCo builds for a plain link (add_uri_to_queue), which is what
+# HA's play_media sends for ours: no title of its own, so the speaker reads
+# the song's tags like it does for the rest of the queue.
+_DIDL = ('<DIDL-Lite xmlns:dc="http://purl.org/dc/elements/1.1/" '
+         'xmlns:upnp="urn:schemas-upnp-org:metadata-1-0/upnp/" '
+         'xmlns:r="urn:schemas-rinconnetworks-com:metadata-1-0/" '
+         'xmlns="urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/">'
+         '<item id="" parentID="" restricted="true"><dc:title></dc:title><upnp:class>object</upnp:class>'
+         '<desc id="cdudn" nameSpace="urn:schemas-rinconnetworks-com:metadata-1-0/">RINCON_AssociatedZPUDN</desc>'
+         '<res protocolInfo="x-rincon-playlist:*:*:*">{uri}</res></item></DIDL-Lite>')
+
+
+def _add_next(speaker, links, gen):
+    """Play Next: the links go in right after the song playing, in order.
+    WHY not HA's play_media with enqueue "next": HA works out "after the song
+    playing" from its own copy of the speaker's state, which runs ~30 s stale
+    here (see state() below), so near a song change it would land a song off.
+    The speaker is asked where it is instead, and given exact positions."""
+    host = SPEAKER_HOSTS[speaker]
+    try:
+        track = int(_tag(_soap(host, "AVTransport", "GetPositionInfo"), "Track") or 0)
+    except Exception as e:
+        log(f"play next: couldn't read the speaker's place: {e}")
+        return
+    for k, link in enumerate(links):
+        if not _current(speaker, gen):
+            return
+        meta = escape(_DIDL.format(uri=escape(link)))
+        try:
+            _soap(host, "AVTransport", "AddURIToQueue",
+                  f"<EnqueuedURI>{escape(link)}</EnqueuedURI><EnqueuedURIMetaData>{meta}</EnqueuedURIMetaData>"
+                  f"<DesiredFirstTrackNumberEnqueued>{track + 1 + k}</DesiredFirstTrackNumberEnqueued>"
+                  "<EnqueueAsNext>0</EnqueueAsNext>")
+        except Exception as e:
+            log(f"play next: adding to queue failed: {e}")
+            return
 
 
 # Reading state goes to the speaker itself, not HA. HA's copy of a Sonos runs
@@ -526,7 +569,7 @@ class Handler(BaseHTTPRequestHandler):
                 ha_service("media_player", "unjoin", entity_id=sp)
                 return self.send_json(200, {"ok": True})
             if self.path == "/speakers/api/add" and ids:
-                add(sp, ids)
+                add(sp, ids, bool(body.get("next")))
                 return self.send_json(200, {"ok": True})
             if self.path == "/speakers/api/command" and body.get("cmd") in COMMANDS:
                 command(sp, body["cmd"], body.get("value") or 0)

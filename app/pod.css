@@ -403,6 +403,34 @@ body.cf-on #pod { display: none; }
 }
 .letter.on { opacity: 1; transition: none; }
 
+/* A short note after an action ("Playing Next"), low on the screen. */
+.toast {
+  position: absolute; left: 50%; bottom: 6cqh; transform: translateX(-50%);
+  max-width: 86cqw; padding: 1.4cqh 4cqw; border-radius: 2cqh;
+  background: rgba(30, 32, 36, .82); color: #fff;
+  font-size: 5cqh; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 5;
+}
+.toast.on { opacity: 1; transition: none; }
+
+/* ---------- the hold menu (ui.js HoldMenu) ---------- */
+/* A box over the list it was held on, the list dimmed behind it. */
+.hm-scrim { position: absolute; inset: 0; background: rgba(0, 0, 0, .38); }
+.hm {
+  position: absolute; left: 7cqw; right: 7cqw; top: 50%; transform: translateY(-50%);
+  background: #fff; border: 1px solid #8f9297; border-radius: 1.6cqh;
+  box-shadow: 0 1cqh 4cqh rgba(0, 0, 0, .45);
+  overflow: hidden; display: flex; flex-direction: column;
+}
+.hm-head {
+  flex: none; padding: 1.2cqh 3cqw;
+  background: linear-gradient(#fdfdfd, #dfe1e5); border-bottom: 1px solid #b7babe;
+  font-size: 4.8cqh; font-weight: 700; color: #3a3c40; text-align: center;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.hm-body { flex: none; display: flex; position: relative; }
+.hm-body .note { grid-row: 1 / -1; }
+
 /* ---------- Search ---------- */
 .search { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .search-query {

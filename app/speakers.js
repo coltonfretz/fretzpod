@@ -27,6 +27,7 @@ const AHEAD = 40;      // songs after it loaded at the start
 const TOPUP = 25;      // added when the speaker gets within LOW songs of the end
 const LOW = 5;
 const SAVE_KEY = 'fp.speakers';
+const MAX_ADD = 60;    // songs per add request (speakers.py MAX_ITEMS)
 const LINK_LIFE_MS = 11 * 3600e3;   // song links last 12 h (speakers.py); reload before then
 const GRACE_MS = 15000;             // after a load, the speaker may still show its old track
 const MEMBERS_EVERY = 3;            // polls between checks of who else is in the group (~6 s)
@@ -135,6 +136,34 @@ class SpeakerPlayer extends Emitter {
     this.queue = a.queue;
     this.refill = refill;
     this.load(a.index, offset);
+  }
+
+  // The hold menu's Play Next and Play Later (ui.js), same as the phone's.
+  // Songs past the window the speaker holds get there by topUp(); ones
+  // inside it go into the speaker's queue right after the song playing
+  // (speakers.py add with next), so the music doesn't stop or restart.
+  playNext(items) {
+    if (!this.playing) { this.play(items, 0); return; }
+    const at = this.index + 1;
+    const inWindow = at < this.base + this.sent;
+    // One add request takes MAX_ADD songs, and a second one couldn't land in
+    // the middle in the right order, so a bigger pick (an artist's All Songs)
+    // only puts its first MAX_ADD next.
+    if (inWindow) items = items.slice(0, MAX_ADD);
+    this.queue.splice(at, 0, ...items);
+    if (inWindow) {
+      this.sent += items.length;
+      call('add', { speaker: this.speaker.id, ids: items.map((x) => x.Id), next: true })
+        .catch((e) => log(`speaker add: ${e.message}`));
+    }
+    this.save();
+  }
+
+  playLater(items) {
+    if (!this.playing) { this.play(items, 0); return; }
+    this.queue.push(...items);
+    this.save();
+    this.topUp();
   }
 
   // Loads a window of the queue into the speaker and starts at song qi.
@@ -410,6 +439,8 @@ export class Output extends Emitter {
   set volume(v) { this.p.volume = v; }
   get canVolume() { return this.p.canVolume; }
   play(...a) { return this.p.play(...a); }
+  playNext(items) { return this.p.playNext(items); }
+  playLater(items) { return this.p.playLater(items); }
   toggle() { return this.p.toggle(); }
   next() { return this.p.next(); }
   prev() { return this.p.prev(); }
