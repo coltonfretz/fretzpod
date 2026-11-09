@@ -722,3 +722,44 @@ canvas.game { flex: 1; width: 100%; height: 100%; display: block; }
 @keyframes sleep-drift { from { transform: translate(-3cqw, -2cqh); } to { transform: translate(3cqw, 2cqh); } }
 #wheel { transition: opacity .3s; }
 body.asleep #wheel { opacity: .28; transition: opacity 1.2s; }
+
+/* ---------- Cover Flow in Music (ui.js CoverFlowScreen) ---------- */
+/* The same pieces as the sideways Cover Flow above, sized to the iPod
+   screen (cqh/cqw instead of the window's vh/vw). */
+.cf-mini {
+  --s: 46cqh;
+  position: absolute; inset: 0; overflow: hidden;
+  background: radial-gradient(ellipse at 50% 40%, #222327, #000 75%);
+  perspective: 520px;
+  touch-action: none;
+}
+.cf-mini[hidden] { display: none; }
+.cf-mini .cf-stage { top: 47%; }
+.cf-mini .cf-letters { padding: 1.2cqh 2cqw 1.6cqh; font-size: 3.6cqh; }
+.cf-mini .cf-caption { bottom: 2.6cqh; }
+.cf-mini .cf-title { font-size: 5.2cqh; padding: 0 5cqw; }
+.cf-mini .cf-artist { font-size: 4.4cqh; margin-top: .4cqh; }
+/* Above the A-Z bar (z-index 2000), which hides while a cover is turned
+   over (the bar is wider than the card and peeked out at its corners). */
+.cf-mini.flipped .cf-letters { visibility: hidden; }
+.cf-mini .cf-back { top: 2.5cqh; bottom: 2.5cqh; width: 80cqw; border-radius: 1.2cqh; z-index: 3000; }
+.cf-mini .cf-back-head { padding: 1.2cqh 3cqw; }
+.cf-mini .cf-back-title { font-size: 5cqh; }
+.cf-mini .cf-back-artist { font-size: 4.2cqh; }
+.cf-mini .cf-track { gap: 2cqw; padding: 1.3cqh 3cqw; font-size: 4.8cqh; }
+.cf-mini .cf-track .n { width: 5cqw; }
+.cf-mini .cf-loading { padding: 4cqh; font-size: 4.6cqh; }
+/* The wheel's highlight on the flipped cover's songs (CoverFlow.backStep);
+   the sideways one is tapped, so it doesn't show there. */
+.cf-mini .cf-track.sel { background: var(--sel); color: #fff; }
+.cf-mini .cf-track.sel .n, .cf-mini .cf-track.sel .t { color: #dde9ff; }
+/* Dark screen: the turned-over cover in Music's Cover Flow follows it (the
+   sideways one keeps its white card, like the rest of that view). */
+:root[data-screen="dark"] .cf-mini .cf-back { background: var(--d-panel); color: var(--d-ink); }
+:root[data-screen="dark"] .cf-mini .cf-back-head { background: var(--d-bar); border-bottom-color: #000; }
+:root[data-screen="dark"] .cf-mini .cf-back-artist,
+:root[data-screen="dark"] .cf-mini .cf-track .t,
+:root[data-screen="dark"] .cf-mini .cf-loading { color: var(--d-dim); }
+:root[data-screen="dark"] .cf-mini .cf-track { border-bottom-color: #2a2c31; }
+:root[data-screen="dark"] .cf-mini .cf-track .n { color: var(--d-dim); }
+:root[data-screen="dark"] .cf-mini .cf-track.sel .n, :root[data-screen="dark"] .cf-mini .cf-track.sel .t { color: #dde9ff; }

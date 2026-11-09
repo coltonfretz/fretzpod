@@ -29,6 +29,30 @@ const TAP_SLOP = 16;        // px a finger may wobble and still count as a tap
 const LETTERS = ['#', ...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'];
 const MIN_SONGS = 4;
 
+// The sorted album list, loaded once and shared by both Cover Flows (the
+// sideways one and the one in Music, ui.js CoverFlowScreen).
+let shared = null;
+function loadAlbums() {
+  shared = shared || api.allAlbums().then((d) => {
+    const coll = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+    const real = d.Items.filter((a) => (a.ChildCount || 0) >= MIN_SONGS);
+    const list = (real.length ? real : d.Items).map((a) => {
+      const k = (a.AlbumArtist || '').trim().replace(/^the\s+/i, '');
+      const c = k.charAt(0).toUpperCase();
+      return { a, k, l: /[A-Z]/.test(c) ? c : '#' };
+    });
+    // Numbers, symbols and non-Latin names first under "#", then A-Z by
+    // artist, then album name.
+    list.sort((x, y) => (x.l === '#' ? 0 : 1) - (y.l === '#' ? 0 : 1)
+      || coll.compare(x.k, y.k) || coll.compare(x.a.Name, y.a.Name));
+    const letterStart = {};
+    list.forEach((x, i) => { if (!(x.l in letterStart)) letterStart[x.l] = i; });
+    return { albums: list.map((x) => x.a), letters: list.map((x) => x.l), letterStart };
+  });
+  shared.catch(() => { shared = null; });   // a failed load is tried again next time
+  return shared;
+}
+
 export class CoverFlow {
   // hooks.play(items, i): start songs; hooks.tick(): click + buzz per cover
   constructor(root, hooks) {
@@ -115,22 +139,10 @@ export class CoverFlow {
     if (this.loading) return;
     this.loading = true;
     this.captionTitle.textContent = 'Loading albums…';
-    api.allAlbums().then((d) => {
-      const coll = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
-      const real = d.Items.filter((a) => (a.ChildCount || 0) >= MIN_SONGS);
-      const list = (real.length ? real : d.Items).map((a) => {
-        const k = (a.AlbumArtist || '').trim().replace(/^the\s+/i, '');
-        const c = k.charAt(0).toUpperCase();
-        return { a, k, l: /[A-Z]/.test(c) ? c : '#' };
-      });
-      // Numbers, symbols and non-Latin names first under "#", then A-Z by
-      // artist, then album name.
-      list.sort((x, y) => (x.l === '#' ? 0 : 1) - (y.l === '#' ? 0 : 1)
-        || coll.compare(x.k, y.k) || coll.compare(x.a.Name, y.a.Name));
-      this.albums = list.map((x) => x.a);
-      this.letters = list.map((x) => x.l);
-      this.letterStart = {};
-      list.forEach((x, i) => { if (!(x.l in this.letterStart)) this.letterStart[x.l] = i; });
+    loadAlbums().then((d) => {
+      this.albums = d.albums;
+      this.letters = d.letters;
+      this.letterStart = d.letterStart;
       for (const sp of this.bar.children) sp.classList.toggle('empty', !(sp.dataset.l in this.letterStart));
       this.total = this.albums.length;
       this.lastCenter = -1;
@@ -258,6 +270,63 @@ export class CoverFlow {
     this.raf = requestAnimationFrame(step);
   }
 
+  // ---------- the wheel (Cover Flow in Music: ui.js CoverFlowScreen) ----------
+  //
+  // One cover per tick, gliding there with the same spring a tap uses;
+  // spinning fast jumps a letter at a time. Center turns the middle cover
+  // over to its songs, and then the wheel moves through those.
+
+  centerIndex() { return this.target ?? Math.round(this.pos); }
+  centerAlbum() { return this.albums[this.centerIndex()] || null; }
+
+  step(dir) {
+    if (!this.total) return false;
+    const from = this.centerIndex();
+    const to = this.clamp(from + dir);
+    if (to === from) return false;
+    this.glide(to);
+    return true;
+  }
+
+  // To the first album of the next (or this one's, going back) letter.
+  jumpLetter(dir) {
+    if (!this.total) return false;
+    const at = this.centerIndex();
+    const starts = Object.values(this.letterStart).sort((a, b) => a - b);
+    const to = dir > 0 ? starts.find((i) => i > at) ?? this.total - 1 : starts.findLast((i) => i < at) ?? 0;
+    if (to === at) return false;
+    this.glide(to);
+    return true;
+  }
+
+  glide(to) {
+    // A long way off: start most of the way there so the glide stays short.
+    if (Math.abs(to - this.pos) > 10) this.pos = to - Math.sign(to - this.pos) * 6;
+    this.vel = 0;
+    this.target = to;
+    this.animate();
+  }
+
+  // The flipped cover's songs: move the highlight, play the highlighted one.
+  backStep(dir) {
+    const t = this.tracks;
+    if (!t) return false;
+    const sel = Math.max(0, Math.min(t.rows.length - 1, t.sel + dir));
+    if (sel === t.sel) return false;
+    t.rows[t.sel].classList.remove('sel');
+    t.sel = sel;
+    t.rows[sel].classList.add('sel');
+    t.rows[sel].scrollIntoView({ block: 'nearest' });
+    return true;
+  }
+
+  backPlay() {
+    const t = this.tracks;
+    if (t) t.rows[t.sel].click();
+  }
+
+  backSong() { return this.tracks ? this.tracks.items[this.tracks.sel] : null; }
+
   // ---------- drawing ----------
 
   layout() {
@@ -321,6 +390,8 @@ export class CoverFlow {
     const a = this.albums[i];
     if (!a) return;
     this.flipped = a;
+    this.tracks = null;
+    this.root.classList.add('flipped');
     const back = this.back;
     back.replaceChildren();
     const head = el('div', 'cf-back-head');
@@ -335,6 +406,7 @@ export class CoverFlow {
       const d = await api.albumSongs(a.Id);
       if (this.flipped !== a) return;
       list.replaceChildren();
+      const rows = [];
       d.Items.forEach((s, j) => {
         const row = el('div', 'cf-track');
         row.append(el('span', 'n', String(s.IndexNumber || j + 1)), el('span', 'name', s.Name), el('span', 't', fmt(s.RunTimeTicks / 1e7)));
@@ -344,7 +416,10 @@ export class CoverFlow {
           this.hooks.play(d.Items, j);
         });
         list.append(row);
+        rows.push(row);
       });
+      // The wheel's highlight (backStep); only shown in the Music copy (pod.css).
+      if (rows.length) { rows[0].classList.add('sel'); this.tracks = { items: d.Items, rows, sel: 0 }; }
     } catch (e) {
       list.replaceChildren(el('div', 'cf-loading', `Couldn't load songs: ${e.message}`));
     }
@@ -353,6 +428,8 @@ export class CoverFlow {
   closeBack() {
     if (!this.flipped) return;
     this.flipped = null;
+    this.tracks = null;
+    this.root.classList.remove('flipped');
     const back = this.back;
     back.animate([{ transform: 'rotateY(0) scale(1)', opacity: 1 }, { transform: 'rotateY(180deg) scale(.6)', opacity: 0 }], { duration: 300, easing: 'ease-in' })
       .finished.then(() => { if (!this.flipped) back.hidden = true; }, () => { back.hidden = true; });

@@ -17,6 +17,7 @@ import { HOLD_MS, HOLD_REPEAT_MS } from './wheel.js';
 import { Tv, tvData } from './tv.js';
 import { Golf, SHOP, golfSave, shopPick, courseOpen } from './golf.js';
 import { COURSES } from './golf-holes.js';
+import { CoverFlow } from './coverflow.js';
 
 const ROWS = 8;            // like the iPod Classic's 320x240 screen
 const PAGE = 100;
@@ -665,6 +666,70 @@ class Search {
   }
 }
 
+// Cover Flow inside the iPod screen, phone upright, driven by the wheel
+// (Music > Cover Flow), like the 6th-gen iPod's. Same albums, order and A-Z
+// bar as the sideways one (coverflow.js); swiping works here too. The wheel
+// moves a cover per tick and a letter at a time when spun fast; center turns
+// the cover over to its songs; MENU turns it back.
+class CoverFlowScreen {
+  constructor(ui) {
+    this.title = 'Cover Flow';
+    this.ticks = [];
+    // tick: no-op, since UI.turn already clicks and buzzes once per turn.
+    this.cf = new CoverFlow(el('div', 'cf-mini'), { play: (items, i) => ui.playSongs(items, i), tick: () => {} });
+  }
+
+  attach(ui) { this.ui = ui; }
+
+  render(view) {
+    view.classList.remove('split');
+    // Only the hold menu's box gets cleared away: taking the covers out of
+    // the page and back on every tick would make the browser redo them.
+    const root = this.cf.root;
+    for (const c of [...view.children]) if (c !== root) c.remove();
+    if (root.parentNode !== view) view.append(root);
+    this.cf.show();
+  }
+
+  turn(dir) {
+    const now = performance.now();
+    this.ticks = this.ticks.filter((t) => now - t < 500);
+    this.ticks.push(now);
+    if (this.cf.flipped) return this.cf.backStep(dir);
+    // Spinning fast (as in UI.turn): a letter per ~150 ms, so they can be read.
+    if (this.ticks.length * 2 > 24) {
+      if (now - (this.lastJump || 0) < 150) return false;
+      const moved = this.cf.jumpLetter(dir);
+      if (moved) this.lastJump = now;
+      return moved;
+    }
+    return this.cf.step(dir);
+  }
+
+  select() {
+    if (this.cf.flipped) this.cf.backPlay();
+    else this.cf.openBack(this.cf.centerIndex());
+  }
+
+  back() {
+    if (!this.cf.flipped) return false;
+    this.cf.closeBack();
+    return true;
+  }
+
+  // The hold menu for the song highlighted, or for the album in the middle.
+  holdSelect() {
+    const song = this.cf.flipped && this.cf.backSong();
+    const album = !this.cf.flipped && this.cf.centerAlbum();
+    if (song) this.ui.push(this.ui.songMenu(song, { albumId: song.AlbumId }));
+    else if (album) this.ui.push(this.ui.albumMenu(album));
+    else return false;
+    return true;
+  }
+
+  leave() { this.cf.hide(); }
+}
+
 // ---------- the screen stack ----------
 
 export class UI {
@@ -701,7 +766,7 @@ export class UI {
   // Search, not a game, TV or sign-in.
   calm() {
     const t = this.top;
-    return t instanceof List || t instanceof NowPlaying || t instanceof Search;
+    return t instanceof List || t instanceof NowPlaying || t instanceof Search || t instanceof CoverFlowScreen;
   }
 
   reset(screen) {
@@ -1233,6 +1298,7 @@ export class UI {
   music() {
     return new List('Music', {
       rows: [
+        { label: 'Cover Flow', arrow: true, select: (ui) => ui.push(new CoverFlowScreen(ui)) },
         { label: 'Playlists', arrow: true, select: (ui) => ui.push(ui.playlists()) },
         { label: 'Favorites', arrow: true, select: (ui) => ui.push(ui.favorites()) },
         { label: 'Artists', arrow: true, select: (ui) => ui.push(ui.artists()) },
