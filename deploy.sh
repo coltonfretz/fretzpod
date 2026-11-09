@@ -30,6 +30,7 @@ cm() {
 cm fretzpod-app --from-file="$BUILD/html/"
 # --from-file=dir/ skips subfolders; vendor (hls.js) is its own ConfigMap.
 cm fretzpod-vendor --from-file="$BUILD/vendor/"
+cm fretzpod-guide --from-file="$BUILD/guide/"
 cm fretzpod-nginx --from-file=default.conf="$BUILD/default.conf"
 DEPLOYS=(fretzpod)
 manifests=(-f "$SITE/fretzpod.yaml")
@@ -51,7 +52,7 @@ stamp() {
   kubectl -n "$NS" patch deploy "$1" --type merge \
     -p "{\"spec\":{\"template\":{\"metadata\":{\"annotations\":{\"fretzpod/inputs\":\"$2\"}}}}}"
 }
-stamp fretzpod "$(cat "$BUILD"/html/* "$BUILD"/vendor/* "$BUILD/default.conf" "$SITE/fretzpod.yaml" | sha256sum | cut -c1-16)"
+stamp fretzpod "$(cat "$BUILD"/html/* "$BUILD"/vendor/* "$BUILD"/guide/* "$BUILD/default.conf" "$SITE/fretzpod.yaml" | sha256sum | cut -c1-16)"
 for helper in speakers scores; do
   if [ -f "$SITE/$helper.yaml" ]; then
     stamp "fretzpod-$helper" "$(cat "$helper/$helper.py" "$SITE/$helper.yaml" | sha256sum | cut -c1-16)"

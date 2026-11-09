@@ -1810,6 +1810,9 @@ export class UI {
         info('Server', api.AWAY ? 'Away' : 'Home'),
         info('Playback', this.player.basic ? 'Basic' : streamType.mux ? 'Stream (MP4)' : 'Stream'),
         { label: 'Log', arrow: true, select: (ui) => ui.push(new List('Log', { rows: logLines().map((l) => ({ label: l })), empty: 'Empty' })) },
+        // The User Guide (app/guide/, served at /guide/). A new tab or window:
+        // leaving this page would stop the music.
+        { label: 'User Guide', arrow: '\u2197\uFE0E', select: () => window.open('guide/', '_blank', 'noopener') },
       ],
     });
   }

@@ -30,6 +30,8 @@ Inspired by the iPod Classic. Not affiliated with or endorsed by Apple.
 - **Body colors:** silver, black, blue, red, purple. Settings -> Wheel gives the wheel a color of its own (Original is the wheel the body came with), and Settings -> Selection changes the highlight color (the gold and clear prize bodies keep their own wheel, but take the highlight color). Plus prizes: a gold body for a huge lifetime total in each game, with that game's symbol pressed into the corner, and a clear case showing the insides for all three.
 - **Private:** no play reporting to Jellyfin, no access log, no analytics, nothing loaded from outside your server. See DESIGN.md, "Privacy".
 
+A **User Guide** written like the iPod classic's manual is served at `/guide/` (Settings -> About -> User Guide). Put a `guide-support.html` in your site folder to replace its generic support chapter with your own (see `build.py`).
+
 Everyone signs in with their own Jellyfin account (Quick Connect or password) and sees only what that account allows.
 
 ## Install

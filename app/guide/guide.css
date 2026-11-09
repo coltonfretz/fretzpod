@@ -1,0 +1,97 @@
+/* Fretzpod User Guide. Laid out like a printed product manual: blue section
+   headings, gray-headed "To / Do this" tables, screenshots at the size of
+   the screen they show. Prints to a clean PDF (the @media print block). */
+:root {
+  --ink: #1d1d1f;
+  --soft: #515154;
+  --blue: #0b6bcb;
+  --rule: #d2d2d7;
+  --head: #8e9196;
+  --paper: #ffffff;
+  --tint: #f5f5f7;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--paper); color: var(--ink);
+  font: 16px/1.55 -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+main { max-width: 760px; margin: 0 auto; padding: 32px 20px 64px; }
+a { color: var(--blue); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* Cover and contents */
+.cover { padding: 24px 0 8px; border-bottom: 1px solid var(--rule); margin-bottom: 24px; }
+.cover h1 { font-size: 34px; font-weight: 600; letter-spacing: -0.01em; margin: 0; }
+.cover p { color: var(--soft); margin: 4px 0 0; }
+.contents { margin: 0 0 40px; }
+.contents h2 { font-size: 22px; font-weight: 600; color: var(--ink); margin: 0 0 8px; }
+.contents ol { margin: 0; padding: 0; list-style: none; }
+.contents > ol > li { margin: 10px 0 0; font-weight: 600; }
+.contents ol ol { margin: 2px 0 0 0; padding-left: 20px; font-weight: 400; }
+.contents ol ol li { margin: 1px 0; }
+
+/* Chapters */
+.chapter { border-top: 1px solid var(--rule); padding-top: 28px; margin-top: 48px; }
+.chapter > .num { color: var(--soft); font-size: 15px; margin: 0; }
+.chapter > h1 { font-size: 30px; font-weight: 600; margin: 0 0 8px; }
+h2 { color: var(--blue); font-size: 23px; font-weight: 400; margin: 32px 0 6px; }
+h3 { color: var(--blue); font-size: 18px; font-weight: 400; margin: 24px 0 4px; }
+h4 { font-size: 16px; font-weight: 600; margin: 18px 0 4px; }
+p { margin: 0 0 12px; }
+ol.steps { margin: 0 0 14px; padding-left: 0; list-style: none; counter-reset: step; }
+ol.steps li { counter-increment: step; position: relative; padding-left: 28px; margin: 0 0 6px; }
+ol.steps li::before { content: counter(step); position: absolute; left: 4px; color: var(--blue); font-weight: 600; }
+ul.square { margin: 0 0 14px; padding-left: 0; list-style: none; }
+ul.square li { position: relative; padding-left: 22px; margin: 0 0 6px; }
+ul.square li::before { content: ""; position: absolute; left: 4px; top: 0.6em; width: 7px; height: 7px; background: var(--blue); }
+.note { margin: 0 0 14px; }
+.note b { font-weight: 600; }
+.menu { font-weight: 600; }
+kbd { font: inherit; font-weight: 600; }
+
+/* Tables */
+table { width: 100%; border-collapse: collapse; margin: 6px 0 18px; font-size: 15px; }
+th { background: var(--head); color: #fff; text-align: left; font-weight: 600; padding: 6px 10px; }
+td { border-bottom: 1px solid var(--rule); padding: 8px 10px; vertical-align: top; }
+td:first-child { font-weight: 600; width: 38%; }
+td small { display: block; font-weight: 400; color: var(--soft); }
+table.grid { font-size: 14px; }
+table.grid td:first-child { width: 28%; }
+table.grid td { text-align: left; }
+.yes { color: #1e7d34; }
+.no { color: #a1271f; }
+
+/* Pictures */
+figure { margin: 8px 0 18px; }
+figure img { display: block; max-width: 100%; height: auto; border-radius: 4px; }
+figure.screen img { width: 340px; box-shadow: 0 0 0 1px #d7d8dc; }
+figure.phone img { width: 220px; }
+figure.pair { display: flex; flex-wrap: wrap; gap: 14px; }
+figure.pair img { width: 300px; }
+figcaption { color: var(--soft); font-size: 14px; margin-top: 6px; }
+.glance { max-width: 520px; margin: 8px auto 20px; }
+.glance svg { width: 100%; height: auto; display: block; }
+.glance text { font: 58px -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif; fill: var(--ink); }
+.glance line { stroke: #6e6e73; stroke-width: 2.5; }
+
+.foot { margin-top: 56px; color: var(--soft); font-size: 13px; border-top: 1px solid var(--rule); padding-top: 12px; }
+
+@media (max-width: 420px) {
+  main { padding: 20px 16px 48px; }
+  .cover h1 { font-size: 28px; }
+  .chapter > h1 { font-size: 26px; }
+  h2 { font-size: 21px; }
+  td:first-child { width: 42%; }
+  figure.screen img, figure.pair img { width: 100%; }
+}
+
+/* Printing, or the browser's Save as PDF: one chapter per page start. */
+@media print {
+  main { max-width: none; padding: 0; }
+  .chapter { break-before: page; border-top: 0; margin-top: 0; }
+  h2, h3, h4 { break-after: avoid; }
+  figure, tr { break-inside: avoid; }
+  a { color: var(--ink); }
+  th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}

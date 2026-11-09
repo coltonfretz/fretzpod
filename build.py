@@ -2,8 +2,9 @@
 """Builds Fretzpod for one site: python3 build.py [site_dir] [out_dir]
 
 Reads site_dir/site.json (default: site/) and writes out_dir (default: build/):
-  html/          the app, ready to serve (from app/, minus vendor/)
+  html/          the app, ready to serve (from app/, minus vendor/ and guide/)
   vendor/        hls.js, served at /vendor/ (TV only)
+  guide/         the User Guide, served at /guide/ (from app/guide/)
   default.conf   the nginx config
 
 WHY a build step at all, when the app is plain JavaScript: a few things
@@ -18,6 +19,11 @@ generic and nobody hand-editing them:
   Policy), the TV servers from app/tv-hosts.json, and the optional helpers
   (Speakers, High Scores): their sections become a plain 404 when the site
   doesn't run them, which is also how the app knows to hide Speakers.
+
+The User Guide gets the server name and version filled in, and the site
+folder's guide-support.html (if there is one) replaces its generic support
+chapter: how to reach the person who runs this server is the site's own
+business and stays out of the repo.
 
 site.json (see examples/site.json):
   serverName   "Sign in to <serverName>"
@@ -71,6 +77,10 @@ for name in sorted(os.listdir(APP)):
     if os.path.isfile(src):
         shutil.copy(src, html)
 shutil.copytree(os.path.join(APP, "vendor"), os.path.join(OUT, "vendor"))
+# A folder of its own (served at /guide/), not part of the app's files: the
+# guide's pictures would crowd the app's ConfigMap toward its 1 MiB limit,
+# and the offline copy of the app (sw.js) has no need for them.
+shutil.copytree(os.path.join(APP, "guide"), os.path.join(OUT, "guide"))
 
 config = {
     "serverName": site.get("serverName") or "Jellyfin",
@@ -94,6 +104,19 @@ with open(sw) as f:
 text = text.replace("__BUILD__", f"{version}-{digest.hexdigest()[:10]}").replace("__SHELL__", shell)
 with open(sw, "w") as f:
     f.write(text)
+
+# ---- the User Guide ----
+guide_page = os.path.join(OUT, "guide", "index.html")
+with open(guide_page) as f:
+    page = f.read()
+support = os.path.join(SITE, "guide-support.html")
+if os.path.exists(support):
+    with open(support) as f:
+        page = re.sub(r"<!-- BEGIN SUPPORT -->.*?<!-- END SUPPORT -->", lambda m: f.read().strip(), page, flags=re.S)
+page = (page.replace("__SERVER__", config["serverName"]).replace("__PURPLE__", config["purpleName"])
+            .replace("__VERSION__", version))
+with open(guide_page, "w") as f:
+    f.write(page)
 
 # ---- nginx ----
 with open(os.path.join(APP, "tv-hosts.json")) as f:

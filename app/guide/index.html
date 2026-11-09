@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fretzpod User Guide</title>
+<link rel="stylesheet" href="guide.css">
+<!-- build.py fills in __SERVER__ and __VERSION__ for each site, and swaps
+     the support chapter (BEGIN/END SUPPORT) for the site's own when the site
+     folder has a guide-support.html. -->
+</head>
+<body>
+<main>
+
+<header class="cover">
+  <h1>Fretzpod User Guide</h1>
+  <p>For Fretzpod __VERSION__ on __SERVER__</p>
+</header>
+
+<nav class="contents">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#basics">Chapter 1: Fretzpod Basics</a>
+      <ol>
+        <li><a href="#glance">Fretzpod at a glance</a></li>
+        <li><a href="#signin">Signing in</a></li>
+        <li><a href="#install">Adding Fretzpod to your Home Screen</a></li>
+        <li><a href="#controls">Using Fretzpod controls</a></li>
+        <li><a href="#menus">Using Fretzpod menus</a></li>
+      </ol>
+    </li>
+    <li><a href="#settings">Chapter 2: Settings</a>
+      <ol>
+        <li><a href="#changing">Changing a setting</a></li>
+        <li><a href="#settings-list">Fretzpod settings</a></li>
+        <li><a href="#look">Changing how Fretzpod looks</a></li>
+        <li><a href="#dark">Using the dark screen</a></li>
+        <li><a href="#art-screen">Using the Art Screen</a></li>
+        <li><a href="#sleep-mode">Using Sleep Mode</a></li>
+        <li><a href="#times">Setting a time</a></li>
+      </ol>
+    </li>
+    <li><a href="#music">Chapter 3: Listening to Music</a>
+      <ol>
+        <li><a href="#browsing">Browsing your music</a></li>
+        <li><a href="#playing">Playing music</a></li>
+        <li><a href="#now-playing">Using the Now Playing screen</a></li>
+        <li><a href="#options">Using the options menu</a></li>
+        <li><a href="#search">Searching for music</a></li>
+        <li><a href="#coverflow">Using Cover Flow</a></li>
+      </ol>
+    </li>
+    <li><a href="#extras">Chapter 4: Extras and More</a>
+      <ol>
+        <li><a href="#games">Playing games</a></li>
+        <li><a href="#scores">High scores and prize bodies</a></li>
+        <li><a href="#alarms">Using alarms and the sleep timer</a></li>
+        <li><a href="#tv">Watching TV</a></li>
+        <li><a href="#car">Using Car Mode</a></li>
+      </ol>
+    </li>
+    <li><a href="#tips">Chapter 5: Tips and Troubleshooting</a>
+      <ol>
+        <li><a href="#where">What works where</a></li>
+        <li><a href="#best">Settings for your device</a></li>
+        <li><a href="#trouble">If something isn't working</a></li>
+        <li><a href="#about">The About screen and the log</a></li>
+      </ol>
+    </li>
+    <li><a href="#support">Chapter 6: Requesting Music and Support</a></li>
+  </ol>
+</nav>
+
+<!-- ======================================================= Chapter 1 -->
+<section class="chapter" id="basics">
+<p class="num">Chapter 1</p>
+<h1>Fretzpod Basics</h1>
+<p>Fretzpod is a music player for your phone, modeled on the iPod classic. It plays the music on __SERVER__, and you control it with a click wheel on the screen.</p>
+
+<h2 id="glance">Fretzpod at a glance</h2>
+<p>Get to know the controls on Fretzpod:</p>
+<div class="glance">
+  <svg viewBox="0 0 1640 1520" role="img" aria-label="Fretzpod with its screen and click wheel labeled">
+    <image href="glance.webp" x="390" y="0" width="780" height="1520"/>
+    <line x1="1200" y1="300" x2="1080" y2="300"/>
+    <text x="1215" y="320">Screen</text>
+    <line x1="370" y1="828" x2="700" y2="828"/>
+    <text x="355" y="848" text-anchor="end">Menu</text>
+    <line x1="370" y1="1052" x2="540" y2="1052"/>
+    <text x="355" y="1040" text-anchor="end"><tspan>Previous/</tspan><tspan x="355" dy="66">Rewind</tspan></text>
+    <line x1="370" y1="1278" x2="740" y2="1278"/>
+    <text x="355" y="1266" text-anchor="end"><tspan>Play/</tspan><tspan x="355" dy="66">Pause</tspan></text>
+    <line x1="1200" y1="880" x2="1010" y2="930"/>
+    <text x="1215" y="868"><tspan>Click</tspan><tspan x="1215" dy="66">Wheel</tspan></text>
+    <line x1="1200" y1="1052" x2="1040" y2="1052"/>
+    <text x="1215" y="1040"><tspan>Next/Fast-</tspan><tspan x="1215" dy="66">forward</tspan></text>
+    <line x1="1200" y1="1240" x2="850" y2="1120"/>
+    <text x="1215" y="1228"><tspan>Center</tspan><tspan x="1215" dy="66">button</tspan></text>
+  </svg>
+</div>
+
+<h2 id="signin">Signing in</h2>
+<p>Fretzpod uses your __SERVER__ account. You can sign in with Quick Connect, using the __SERVER__ app you already have, or with your password.</p>
+<figure class="screen"><img src="sign-in.webp" alt="The sign-in menu with Sign in with Quick Connect and Sign in with password"></figure>
+<h4>Sign in with Quick Connect:</h4>
+<ol class="steps">
+  <li>Open the Fretzpod address you were given.</li>
+  <li>Choose Sign in with Quick Connect. A six-digit code appears.</li>
+  <li>In your __SERVER__ app on another device, open your profile, then Quick Connect, and enter the code.</li>
+</ol>
+<p>Fretzpod signs in on its own a few seconds later. If the code expires, press Menu and choose Sign in with Quick Connect again for a new one.</p>
+<h4>Sign in with your password:</h4>
+<ul class="square"><li>Choose Sign in with password, enter your username and password, and then tap Sign In.</li></ul>
+<p>To sign out, choose Settings -&gt; Sign Out.</p>
+
+<h2 id="install">Adding Fretzpod to your Home Screen</h2>
+<p>Added to your Home Screen, Fretzpod opens like any other app: full screen, with its own icon, and without the browser's address bar.</p>
+<p class="note"><b>Note:</b> Phones only install apps from secure addresses. Use the Fretzpod address that starts with https://.</p>
+<h4>On an Android phone, using Chrome:</h4>
+<ol class="steps">
+  <li>Open Fretzpod in Chrome.</li>
+  <li>Tap the menu button (the three dots) in the top-right corner.</li>
+  <li>Tap Add to Home screen, and then tap Install.</li>
+</ol>
+<h4>On a Samsung phone, using Samsung Internet:</h4>
+<ol class="steps">
+  <li>Open Fretzpod in Samsung Internet.</li>
+  <li>Tap the menu button (the three lines) at the bottom of the screen.</li>
+  <li>Tap Add page to, and then tap Home screen.</li>
+</ol>
+<h4>On an iPhone, using Safari:</h4>
+<ol class="steps">
+  <li>Open Fretzpod in Safari.</li>
+  <li>Tap the Share button.</li>
+  <li>Tap Add to Home Screen, and then tap Add.</li>
+</ol>
+<p>Fretzpod keeps itself up to date. When a new version comes out, you get it the next time you open the app.</p>
+
+<h2 id="controls">Using Fretzpod controls</h2>
+<p>Use the Click Wheel and Center button to move through onscreen menus, play songs, change settings, and get information.</p>
+<p>Move your thumb lightly around the Click Wheel to select a menu item. To choose the item, press the Center button. To go back to the previous menu, press Menu on the Click Wheel.</p>
+<p>Here's what else you can do with Fretzpod controls.</p>
+<table>
+  <tr><th>To</th><th>Do this</th></tr>
+  <tr><td>Choose a menu item</td><td>Use the Click Wheel to scroll to the item and press the Center button to choose it.</td></tr>
+  <tr><td>Go back to the previous menu</td><td>Press Menu.</td></tr>
+  <tr><td>Scroll quickly through a long list</td><td>Move your thumb quickly around the Click Wheel. In Artists and Albums, a large letter appears and Fretzpod jumps one letter at a time.</td></tr>
+  <tr><td>See more options for a song, album, artist, or playlist</td><td>Select it and press and hold the Center button until a menu appears. See <a href="#options">Using the options menu</a>.</td></tr>
+  <tr><td>Play or pause</td><td>Press Play/Pause.</td></tr>
+  <tr><td>Skip to the next song</td><td>Press Next/Fast-forward.</td></tr>
+  <tr><td>Start a song over</td><td>Press Previous/Rewind. Press it again within the first few seconds to go to the previous song.</td></tr>
+  <tr><td>Fast-forward or rewind</td><td>Press and hold Next/Fast-forward or Previous/Rewind.</td></tr>
+  <tr><td>Change the volume</td><td>From the Now Playing screen, use the Click Wheel.<small>On an iPhone, use the volume buttons on the side of the phone.</small></td></tr>
+  <tr><td>Skip to any point in a song</td><td>From the Now Playing screen, press the Center button to show the scrubber bar, and then use the Click Wheel.</td></tr>
+  <tr><td>Change a setting the other way</td><td>In Settings, press Previous/Rewind to step back through a setting's choices, or Next/Fast-forward to step forward.</td></tr>
+  <tr><td>Turn on Sleep Mode</td><td>Press and hold Play/Pause for about a second. Sleep Mode must be turned on in Settings. See <a href="#sleep-mode">Using Sleep Mode</a>.</td></tr>
+</table>
+
+<h3>Using Fretzpod on a computer</h3>
+<p>On a computer, the keyboard works as the Click Wheel.</p>
+<table>
+  <tr><th>To</th><th>Do this</th></tr>
+  <tr><td>Turn the Click Wheel</td><td>Press the Up Arrow or Down Arrow key, or use your mouse or trackpad to scroll.</td></tr>
+  <tr><td>Press the Center button</td><td>Press Return (Enter).</td></tr>
+  <tr><td>Press Menu</td><td>Press Esc or Delete (Backspace).</td></tr>
+  <tr><td>Press Play/Pause</td><td>Press the Space bar.</td></tr>
+  <tr><td>Press Previous or Next</td><td>Press the Left Arrow or Right Arrow key.</td></tr>
+  <tr><td>Press and hold a button</td><td>Hold down its key.</td></tr>
+</table>
+
+<h3>Click sound and vibration</h3>
+<p>Fretzpod clicks as you turn the Click Wheel, and on most Android phones it vibrates lightly too. To turn either off, see <a href="#settings-list">Fretzpod settings</a>.</p>
+
+<h2 id="menus">Using Fretzpod menus</h2>
+<p>When you open Fretzpod, you see the main menu. Choose menu items to perform functions or go to other menus. Icons along the top of the screen show Fretzpod status.</p>
+<figure class="screen"><img src="main-menu.webp" alt="The main menu: Music, TV, Extras, Settings, Shuffle Songs, with album art on the right"></figure>
+<table>
+  <tr><th>Display item</th><th>Function</th></tr>
+  <tr><td>Menu title</td><td>Displays the title of the current menu.</td></tr>
+  <tr><td>Play icon</td><td>The Play icon appears when a song is playing. The Pause icon appears when it's paused.</td></tr>
+  <tr><td>Battery icon</td><td>Shows the approximate charge left on your phone. It appears in Chrome on the secure (https) address.</td></tr>
+  <tr><td>Menu items</td><td>Use the Click Wheel to scroll through menu items. Press the Center button to choose an item. An arrow next to a menu item indicates that it leads to another menu or screen.</td></tr>
+</table>
+<p>The main menu contains these items.</p>
+<table>
+  <tr><th>Menu item</th><th>What it's for</th></tr>
+  <tr><td>Music</td><td>Browse, search, and play your music. See <a href="#music">Chapter 3</a>.</td></tr>
+  <tr><td>TV</td><td>Watch free live TV channels. Appears only if __SERVER__ offers TV. See <a href="#tv">Watching TV</a>.</td></tr>
+  <tr><td>Extras</td><td>Games, high scores, alarms, and the sleep timer. See <a href="#extras">Chapter 4</a>.</td></tr>
+  <tr><td>Settings</td><td>Change how Fretzpod plays, looks, and sounds. See <a href="#settings">Chapter 2</a>.</td></tr>
+  <tr><td>Sleep</td><td>Turns on Sleep Mode. Appears only when Sleep Mode is turned on in Settings.</td></tr>
+  <tr><td>Shuffle Songs</td><td>Plays songs from your whole library in random order.</td></tr>
+  <tr><td>Now Playing</td><td>Shows the song that's playing. Appears only while music is playing or paused.</td></tr>
+</table>
+</section>
+
+<!-- ======================================================= Chapter 2 -->
+<section class="chapter" id="settings">
+<p class="num">Chapter 2</p>
+<h1>Settings</h1>
+<p>Settings change how Fretzpod plays, looks, and sounds. Your settings are kept on your phone, so each device you use can have its own.</p>
+
+<h2 id="changing">Changing a setting</h2>
+<p>Choose Settings from the main menu. Each setting shows its current choice on the right.</p>
+<figure class="screen"><img src="settings.webp" alt="The Settings menu"></figure>
+<ul class="square">
+  <li>To change a setting, select it and press the Center button. Each press moves to the next choice.</li>
+  <li>To move back through the choices, press Previous/Rewind. To move forward, press Next/Fast-forward.</li>
+  <li>A setting with an arrow opens its own menu.</li>
+</ul>
+
+<h2 id="settings-list">Fretzpod settings</h2>
+<table>
+  <tr><th>Setting</th><th>What it does</th></tr>
+  <tr><td>Shuffle<small>Off, Songs</small></td><td>When set to Songs, the songs in an album, playlist, or list play in random order.</td></tr>
+  <tr><td>Repeat<small>Off, One, All</small></td><td>One plays the current song again and again. All starts the list over when it ends.</td></tr>
+  <tr><td>Streaming<small>High, Data saver</small></td><td>High plays at full quality. Data saver uses less than half the data, for cellular connections. Away from home, Fretzpod starts on Data saver.</td></tr>
+  <tr><td>Clicker<small>On, Off</small></td><td>The click sound as you turn the Click Wheel.</td></tr>
+  <tr><td>Haptics<small>Light, Strong, Off</small></td><td>The vibration as you turn the Click Wheel. If you can't feel Light, try Strong. Not available on iPhone or in Firefox.</td></tr>
+  <tr><td>Body</td><td>The color of Fretzpod: Silver, Black, Blue, Red, or __PURPLE__. More bodies can be won in Extras.</td></tr>
+  <tr><td>Wheel</td><td>The color of the Click Wheel. Original is the wheel that comes with the body you chose.</td></tr>
+  <tr><td>Selection</td><td>The color of the highlight on the item you select.</td></tr>
+  <tr><td>Screen</td><td>Light or dark menus. See <a href="#dark">Using the dark screen</a>.</td></tr>
+  <tr><td>Art Screen<small>Off, 30 Seconds, 2 Minutes</small></td><td>Shows the album art when Fretzpod is left alone while music plays. See <a href="#art-screen">Using the Art Screen</a>.</td></tr>
+  <tr><td>Sleep Mode</td><td>A dim clock that keeps the screen on. See <a href="#sleep-mode">Using Sleep Mode</a>.</td></tr>
+  <tr><td>In the Car</td><td>Car Mode, and the apps to use for Android Auto and CarPlay. See <a href="#car">Using Car Mode</a>.</td></tr>
+  <tr><td>About</td><td>Your Fretzpod version and account. See <a href="#about">The About screen and the log</a>.</td></tr>
+  <tr><td>Sign Out</td><td>Signs you out of Fretzpod on this device. You're asked to confirm.</td></tr>
+</table>
+
+<h2 id="look">Changing how Fretzpod looks</h2>
+<p>You can choose the color of the body, the Click Wheel, and the selection highlight separately.</p>
+<ul class="square">
+  <li>Choose Settings -&gt; Body, Settings -&gt; Wheel, or Settings -&gt; Selection, and press the Center button until you see the color you want.</li>
+</ul>
+<p class="note"><b>Note:</b> The gold and clear bodies you can win in Extras keep their own Click Wheel. The Wheel setting shows Prize body while one is on.</p>
+
+<h2 id="dark">Using the dark screen</h2>
+<p>The dark screen shows Fretzpod's menus as light text on black, which is easier on your eyes in a dark room. Car Mode follows it too.</p>
+<h4>Choose light or dark menus:</h4>
+<ol class="steps">
+  <li>Choose Settings -&gt; Screen.</li>
+  <li>Select Mode and press the Center button to choose Light, Dark, Scheduled, or Match Phone.</li>
+</ol>
+<p>Match Phone follows your phone's own dark mode. Scheduled turns the screen dark between two times you set.</p>
+<h4>Set the hours for Scheduled:</h4>
+<ol class="steps">
+  <li>Choose Settings -&gt; Screen and set Mode to Scheduled. Starts and Ends appear.</li>
+  <li>Choose Starts, set the time the screen turns dark, and press the Center button.</li>
+  <li>Choose Ends, set the time it turns light again, and press the Center button.</li>
+</ol>
+
+<h2 id="art-screen">Using the Art Screen</h2>
+<p>When the Art Screen is on, and music is playing, Fretzpod shows the album art on a black screen after you leave it alone for a while, and dims the Click Wheel.</p>
+<figure class="screen"><img src="art-screen.webp" alt="The Art Screen: album art with the song and artist below it"></figure>
+<ul class="square">
+  <li>To turn it on, choose Settings -&gt; Art Screen, and then choose 30 Seconds or 2 Minutes.</li>
+  <li>To return to the menus, touch the screen or press any button. That first touch only brings the menus back. Play/Pause is the exception: it also pauses or plays.</li>
+</ul>
+<p>The Art Screen doesn't cover games, TV, Car Mode, or lyrics.</p>
+
+<h2 id="sleep-mode">Using Sleep Mode</h2>
+<p>In Sleep Mode, Fretzpod dims your whole phone screen to black and shows only the time. Your music keeps playing. While Sleep Mode is showing, your phone's screen stays on, so Fretzpod can sit on a nightstand or desk like a clock.</p>
+<figure class="phone"><img src="sleep-clock.webp" alt="Sleep Mode: a black screen with the time in dim gray"></figure>
+<p>Sleep Mode is off until you turn it on.</p>
+<h4>Turn on Sleep Mode:</h4>
+<ol class="steps">
+  <li>Choose Settings -&gt; Sleep Mode.</li>
+  <li>Select Mode and press the Center button to choose By Hand or Scheduled.</li>
+</ol>
+<figure class="screen"><img src="sleep-mode.webp" alt="The Sleep Mode menu, set to Scheduled from 10:00 PM to 7:00 AM"></figure>
+<table>
+  <tr><th>Mode</th><th>What it does</th></tr>
+  <tr><td>Off</td><td>Sleep Mode isn't used.</td></tr>
+  <tr><td>By Hand</td><td>Sleep Mode starts when you press and hold Play/Pause for about a second, or choose Sleep from the main menu.</td></tr>
+  <tr><td>Scheduled</td><td>Everything By Hand does, and Sleep Mode also starts on its own between the Starts and Ends times you set, after a minute without touching Fretzpod.</td></tr>
+</table>
+<ul class="square">
+  <li>To leave Sleep Mode, touch the screen.</li>
+  <li>The time moves to a new spot every minute, so it doesn't leave a mark on the screen overnight.</li>
+</ul>
+<p class="note"><b>Note:</b> Keeping the screen on only works on the secure (https) Fretzpod address. While lyrics are showing, Fretzpod also keeps the screen on, so it doesn't go dark in the middle of a song.</p>
+
+<h2 id="times">Setting a time</h2>
+<p>Times for the dark screen, Sleep Mode, and alarms are set with the Click Wheel.</p>
+<figure class="screen"><img src="time-picker.webp" alt="Setting a time: 9:15 PM"></figure>
+<ol class="steps">
+  <li>Choose the time you want to change, such as Starts.</li>
+  <li>Use the Click Wheel to move the time forward or back.</li>
+  <li>Press the Center button or Menu to keep the time.</li>
+</ol>
+<p>You can also select the time without opening it and press Previous/Rewind or Next/Fast-forward to move it by one step.</p>
+</section>
+
+<!-- ======================================================= Chapter 3 -->
+<section class="chapter" id="music">
+<p class="num">Chapter 3</p>
+<h1>Listening to Music</h1>
+<p>Fretzpod plays the music on __SERVER__. On Android phones, music keeps playing when you switch to another app or lock your phone, and you can control it from your lock screen, headphones, and car.</p>
+
+<h2 id="browsing">Browsing your music</h2>
+<p>Choose Music from the main menu.</p>
+<figure class="screen"><img src="music.webp" alt="The Music menu"></figure>
+<table>
+  <tr><th>Menu item</th><th>What it shows</th></tr>
+  <tr><td>Cover Flow</td><td>Your albums as covers. See <a href="#coverflow">Using Cover Flow</a>.</td></tr>
+  <tr><td>Playlists</td><td>Your playlists, and playlists shared with you.</td></tr>
+  <tr><td>Favorites</td><td>Songs you've added to your favorites.</td></tr>
+  <tr><td>Artists</td><td>Every artist, A to Z. Choose an artist to see their albums, or All Songs.</td></tr>
+  <tr><td>Albums</td><td>Every album, A to Z.</td></tr>
+  <tr><td>Songs</td><td>Every song, A to Z.</td></tr>
+  <tr><td>Genres</td><td>Albums grouped by genre.</td></tr>
+  <tr><td>Search</td><td>Find an artist, album, or song by name. See <a href="#search">Searching for music</a>.</td></tr>
+</table>
+
+<h2 id="playing">Playing music</h2>
+<ul class="square">
+  <li>To play a song, select it and press the Center button. The rest of the album, playlist, or list plays after it.</li>
+  <li>To play songs from your whole library in random order, choose Shuffle Songs from the main menu.</li>
+  <li>To shuffle an album or playlist, set Settings -&gt; Shuffle to Songs before you choose a song.</li>
+</ul>
+<p>Songs play one after another with no gap between them.</p>
+
+<h2 id="now-playing">Using the Now Playing screen</h2>
+<p>When you play a song, the Now Playing screen appears. To get back to it from anywhere, choose Now Playing from the main menu.</p>
+<figure class="screen"><img src="now-playing.webp" alt="The Now Playing screen"></figure>
+<table>
+  <tr><th>Display item</th><th>Function</th></tr>
+  <tr><td>Song number</td><td>Where the song is in the list that's playing, such as 1 of 11. The word "lyrics" appears when the song has lyrics.</td></tr>
+  <tr><td>Album art</td><td>A small heart appears on the art when the song is one of your favorites.</td></tr>
+  <tr><td>Song information</td><td>The song title, artist, and album.</td></tr>
+  <tr><td>Progress bar</td><td>How far into the song you are, and the time left.</td></tr>
+</table>
+<table>
+  <tr><th>To</th><th>Do this</th></tr>
+  <tr><td>Change the volume</td><td>Use the Click Wheel. A volume bar appears.<small>On an iPhone, the Click Wheel moves through the song instead; use the phone's volume buttons.</small></td></tr>
+  <tr><td>Move to any point in the song</td><td>Press the Center button to show the scrubber bar, use the Click Wheel to move the diamond, and then press the Center button again. Fretzpod also goes to that point on its own after a few seconds.</td></tr>
+  <tr><td>Show the lyrics</td><td>Swipe sideways across the album art. The art turns over to show the lyrics. Swipe again to turn it back.</td></tr>
+  <tr><td>Add the song to your favorites, a playlist, and more</td><td>Press and hold the Center button. See <a href="#options">Using the options menu</a>.</td></tr>
+</table>
+<p>For songs with timed lyrics, each line lights up as it's sung. Lyrics without timing are a page you scroll with your finger.</p>
+
+<h2 id="options">Using the options menu</h2>
+<p>Press and hold the Center button on a song, album, artist, or playlist to see what you can do with it. The options appear in a box over the list.</p>
+<figure class="pair">
+  <img src="hold-menu.webp" alt="The options menu over the Albums list">
+  <img src="now-playing-menu.webp" alt="The options menu over the Now Playing screen">
+</figure>
+<table>
+  <tr><th>Option</th><th>What it does</th></tr>
+  <tr><td>Play Next</td><td>Plays it right after the song that's playing now.</td></tr>
+  <tr><td>Play Later</td><td>Adds it to the end of what's playing.</td></tr>
+  <tr><td>Instant Mix</td><td>Plays a mix of songs like it, chosen by __SERVER__.</td></tr>
+  <tr><td>Add to Playlist</td><td>Choose one of your playlists to add it to.</td></tr>
+  <tr><td>Add to Favorites<small>or Remove from Favorites</small></td><td>Adds the song to your favorites, or takes it off. Favorites are shared with your __SERVER__ account, so they show in every app you use.</td></tr>
+  <tr><td>Go to Artist</td><td>Shows the artist's albums.</td></tr>
+  <tr><td>Go to Album</td><td>Shows the song's album.</td></tr>
+</table>
+<p>Albums, artists, and playlists show the options that work for a group of songs. On the Now Playing screen, Play Next and Play Later don't appear, since the song is already playing.</p>
+<p class="note"><b>Note:</b> You can add songs only to your own playlists and to playlists shared with you for editing.</p>
+<p>To close the options without choosing one, press Menu.</p>
+
+<h2 id="search">Searching for music</h2>
+<p>Search finds artists, albums, and songs as you type, using the Click Wheel to pick letters.</p>
+<figure class="screen"><img src="search.webp" alt="Searching for CAGE, with matching artists and albums"></figure>
+<ol class="steps">
+  <li>Choose Music -&gt; Search.</li>
+  <li>Use the Click Wheel to move along the letters at the bottom of the screen, and press the Center button to add a letter. Results appear after two letters.</li>
+  <li>To erase a letter, choose the arrow (⌫). To add a space, choose ␣.</li>
+  <li>To go to the results, choose Done or press Next/Fast-forward. Then choose an artist, album, or song.</li>
+</ol>
+<p>To go back to the letters from the results, press Menu.</p>
+
+<h2 id="coverflow">Using Cover Flow</h2>
+<p>Cover Flow shows your albums as album covers you can flip through.</p>
+<figure class="screen"><img src="coverflow.webp" alt="Cover Flow with the letter bar along the top"></figure>
+<h4>Use Cover Flow with the Click Wheel:</h4>
+<ol class="steps">
+  <li>Choose Music -&gt; Cover Flow.</li>
+  <li>Use the Click Wheel to move through the covers. Move your thumb quickly to jump one letter at a time. The letter bar at the top shows where you are.</li>
+  <li>Press the Center button to turn the cover over and see its songs.</li>
+  <li>Use the Click Wheel to select a song, and then press the Center button to play it. Press Menu to turn the cover back.</li>
+</ol>
+<h4>Use Cover Flow by turning your phone:</h4>
+<ul class="square">
+  <li>Turn your phone sideways. Cover Flow fills the screen.</li>
+  <li>Swipe to flip through covers, or tap a letter in the bar along the top to jump there.</li>
+  <li>Tap the middle cover to turn it over, and tap a song to play it.</li>
+  <li>Turn your phone upright to return to the menus.</li>
+</ul>
+<p>Cover Flow shows full albums. Albums with only a few songs are left out, but their songs are still in Artists, Songs, and Genres.</p>
+</section>
+
+<!-- ======================================================= Chapter 4 -->
+<section class="chapter" id="extras">
+<p class="num">Chapter 4</p>
+<h1>Extras and More</h1>
+<p>Choose Extras from the main menu for games, high scores, alarms, and the sleep timer.</p>
+<figure class="screen"><img src="extras.webp" alt="The Extras menu"></figure>
+
+<h2 id="games">Playing games</h2>
+<p>Fretzpod includes three games made for the Click Wheel. Each game has its own menu with Start Game (or Go Fishing), the extras you can earn, and Exit Game.</p>
+<p>In any game, press and hold Menu for about a second to pause. Then choose Resume, or Quit game to leave. A quick press of Menu during play only reminds you to hold it.</p>
+
+<h3>Star Pinball</h3>
+<figure class="screen"><img src="pinball.webp" alt="Star Pinball's Star Run table"></figure>
+<table>
+  <tr><th>To</th><th>Do this</th></tr>
+  <tr><td>Use the left and right flippers</td><td>Press Previous/Rewind and Next/Fast-forward. Each flipper stays up while you hold its button, and both work at once.</td></tr>
+  <tr><td>Launch the ball</td><td>Press and hold the Center button to pull the plunger back, and let go to launch. A longer pull is a harder shot.</td></tr>
+  <tr><td>Pause</td><td>Press Play/Pause, or press and hold Menu.</td></tr>
+</table>
+<p>Finish missions to fly to new planets for bonuses. Points add up across games and open new tables and balls.</p>
+
+<h3>Fishing Trip</h3>
+<figure class="screen"><img src="fishing.webp" alt="Fishing Trip at the Lily Pond"></figure>
+<table>
+  <tr><th>To</th><th>Do this</th></tr>
+  <tr><td>Aim</td><td>Use the Click Wheel.</td></tr>
+  <tr><td>Cast</td><td>Press the Center button to start the power bar, and press it again to cast. The further the bar, the further the cast.</td></tr>
+  <tr><td>Reel in and move the lure</td><td>Turn the Click Wheel forward to reel in. Press Previous/Rewind or Next/Fast-forward to steer the lure, and the Center button to give it a twitch.</td></tr>
+  <tr><td>Hook a fish</td><td>When a gold "!" appears and the phone buzzes twice, press the Center button.</td></tr>
+  <tr><td>Land a fish</td><td>Keep the tension bar in the green. Turn forward to reel in and raise the tension, and turn back to give line. Too high snaps the line; too low and the fish gets away.</td></tr>
+  <tr><td>Pause</td><td>Press and hold Menu.</td></tr>
+</table>
+<p>A moving lure draws fish, but reeling too fast scares them off. Each kind of fish takes only certain lures. Your catches fill the Fish Log, and points open new spots and lures.</p>
+
+<h3>Tiki Golf</h3>
+<figure class="screen"><img src="golf.webp" alt="Tiki Golf, hole 1"></figure>
+<table>
+  <tr><th>To</th><th>Do this</th></tr>
+  <tr><td>Aim</td><td>Use the Click Wheel. Press Previous/Rewind or Next/Fast-forward for a small adjustment.</td></tr>
+  <tr><td>Putt</td><td>Press the Center button to lock your aim, and press it again to stop the power meter.</td></tr>
+  <tr><td>Pause</td><td>Press Play/Pause, or press and hold Menu.</td></tr>
+</table>
+<p>Good holes earn coins. Spend them in the Shop on new balls and trails.</p>
+
+<h2 id="scores">High scores and prize bodies</h2>
+<p>Star Pinball and Fishing Trip share their high scores with everyone on __SERVER__. To see the boards, choose Extras -&gt; High Scores.</p>
+<ul class="square">
+  <li>You appear on the boards as a player number until you choose a name. To choose or change it, choose Extras -&gt; High Scores -&gt; Your Name, and pick the letters with the Click Wheel.</li>
+  <li>Each game's menu has a Gold Body item that shows how close you are to winning a gold Fretzpod body. Win all three for one more.</li>
+  <li>Once a prize body is won, choose it in the game's menu or in Settings -&gt; Body.</li>
+</ul>
+
+<h2 id="alarms">Using alarms and the sleep timer</h2>
+<p>Fretzpod can wake you with music, and stop the music after a while when you're falling asleep. Choose Extras -&gt; Alarms.</p>
+<figure class="screen"><img src="alarms.webp" alt="The Alarms menu"></figure>
+<h4>Set the alarm:</h4>
+<ol class="steps">
+  <li>Choose Extras -&gt; Alarms.</li>
+  <li>Choose Time, set the time, and press the Center button.</li>
+  <li>Choose Repeat to pick Every Day or Once.</li>
+  <li>Choose Plays, and then choose Shuffle Songs, Favorites, or a playlist.</li>
+  <li>Select Alarm and press the Center button to turn it On.</li>
+</ol>
+<p>When the alarm goes off, the music starts quietly and gets louder over about 30 seconds. Pause it as you would any song.</p>
+<p class="note"><b>Important:</b> The alarm goes off only while Fretzpod is open and your phone's screen is on, such as with Sleep Mode showing. A web app can't wake a phone that's asleep. For an alarm you can't miss, use your phone's Clock app.</p>
+<h4>Set the sleep timer:</h4>
+<ul class="square">
+  <li>Choose Extras -&gt; Alarms -&gt; Sleep Timer, and then choose how long the music should play, or End of Song.</li>
+</ul>
+<p>When the time is up, the music fades out and pauses. The Sleep Timer item shows the time left. To cancel the timer, choose Off.</p>
+
+<h2 id="tv">Watching TV</h2>
+<p>If __SERVER__ offers TV, a TV item appears in the main menu with a list of free live channels and what's on now.</p>
+<table>
+  <tr><th>To</th><th>Do this</th></tr>
+  <tr><td>Change the channel</td><td>Use the Click Wheel, or press Previous/Rewind or Next/Fast-forward to move one channel.</td></tr>
+  <tr><td>See what's on now and next</td><td>Press the Center button.</td></tr>
+  <tr><td>Pause</td><td>Press Play/Pause.</td></tr>
+  <tr><td>Watch full screen</td><td>Turn your phone sideways. Swipe to change the channel.</td></tr>
+  <tr><td>Change the volume</td><td>Use the volume buttons on your phone.</td></tr>
+</table>
+
+<h2 id="car">Using Car Mode</h2>
+<p>Car Mode is made for a phone on the dashboard. The Click Wheel becomes four large buttons and the Center button, and the screen shows what's playing in large type. On an Android phone, use it in split screen next to your maps.</p>
+<figure class="phone"><img src="car-mode.webp" alt="Car Mode: Now Playing in large type above four large buttons"></figure>
+<ul class="square">
+  <li>To start Car Mode, choose Settings -&gt; In the Car -&gt; Enter Car Mode.</li>
+  <li>To open the menu, press Menu. It has Shuffle Songs, Favorites, Playlists, Shuffle a Genre, and Leave Car Mode. Press Previous/Rewind or Next/Fast-forward to move, and the Center button to choose.</li>
+  <li>On the Now Playing screen, press Previous/Rewind or Next/Fast-forward to change songs, and Play/Pause to pause. Press the Center button to add the song to your favorites, or to start Shuffle Songs when nothing is playing.</li>
+  <li>To leave Car Mode, press Menu and choose Leave Car Mode.</li>
+</ul>
+<p>Car Mode keeps your screen on (on the secure address). Your car's Bluetooth shows the song, and the steering wheel buttons work, with or without Car Mode.</p>
+<p class="note"><b>Note:</b> Android Auto and CarPlay show only apps made for them. Settings -&gt; In the Car links to a free app that plays __SERVER__ music in both.</p>
+</section>
+
+<!-- ======================================================= Chapter 5 -->
+<section class="chapter" id="tips">
+<p class="num">Chapter 5</p>
+<h1>Tips and Troubleshooting</h1>
+
+<h2 id="where">What works where</h2>
+<p>Fretzpod works in any modern web browser. Some features depend on what your phone or browser allows.</p>
+<table class="grid">
+  <tr><th>Feature</th><th>Android (Chrome)</th><th>Android (Firefox)</th><th>iPhone (Safari)</th><th>Computer</th></tr>
+  <tr><td>Music, menus, games</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+  <tr><td>Click sound</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+  <tr><td>Vibration</td><td class="yes">Yes</td><td class="no">No</td><td class="no">No</td><td class="no">No</td></tr>
+  <tr><td>Volume with the Click Wheel</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="no">No, use the phone's buttons</td><td class="yes">Yes</td></tr>
+  <tr><td>Install on the Home Screen</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td>Chrome and Edge</td></tr>
+  <tr><td>Cover Flow by turning the phone</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td>Music -&gt; Cover Flow only</td></tr>
+  <tr><td>Keep the screen on (Sleep Mode, Car Mode, lyrics)</td><td class="yes">Yes, on https</td><td class="yes">Yes, on https</td><td class="yes">Yes, on https</td><td class="yes">Yes, on https</td></tr>
+</table>
+
+<h2 id="best">Settings for your device</h2>
+<table>
+  <tr><th>If you use</th><th>Try this</th></tr>
+  <tr><td>An Android phone</td><td>Use Chrome, and add Fretzpod to your Home Screen. If you can't feel the Click Wheel, set Haptics to Strong.</td></tr>
+  <tr><td>An iPhone</td><td>Add Fretzpod to your Home Screen from Safari. Use the side buttons for volume; on the Now Playing screen, the Click Wheel moves through the song.</td></tr>
+  <tr><td>Cellular data</td><td>Set Streaming to Data saver.</td></tr>
+  <tr><td>A phone on a nightstand</td><td>Turn on Sleep Mode, set the Screen to Dark or Scheduled, and keep the phone on its charger.</td></tr>
+  <tr><td>A phone in the car</td><td>Use Car Mode in split screen next to your maps.</td></tr>
+  <tr><td>A computer</td><td>Use the keyboard. See <a href="#controls">Using Fretzpod on a computer</a>.</td></tr>
+</table>
+
+<h2 id="trouble">If something isn't working</h2>
+<h4>The music stops between songs with the screen off</h4>
+<ul class="square">
+  <li>Choose Settings -&gt; About and look at Playback. If it says Basic, your browser can't use Fretzpod's normal player. On Android, use Chrome.</li>
+</ul>
+<h4>A list says "Couldn't load. Try again later."</h4>
+<ul class="square">
+  <li>Check your Internet connection, and then press Menu and open the list again. If it keeps happening, __SERVER__ may be down for a moment.</li>
+</ul>
+<h4>The Click Wheel doesn't vibrate</h4>
+<ul class="square">
+  <li>Check that Settings -&gt; Haptics isn't Off, and try Strong.</li>
+  <li>Phones don't vibrate in Do Not Disturb or with sound turned off. Check your phone's sound mode.</li>
+</ul>
+<h4>The screen turns off while you're reading lyrics or using Sleep Mode</h4>
+<ul class="square">
+  <li>Use the Fretzpod address that starts with https://, or the app on your Home Screen added from it.</li>
+</ul>
+<h4>The alarm didn't go off</h4>
+<ul class="square">
+  <li>The alarm needs Fretzpod open with the screen on. Leave Sleep Mode showing with the phone on its charger.</li>
+</ul>
+<h4>You were signed out</h4>
+<ul class="square">
+  <li>Sign in again. This happens when your sign-in is removed from your __SERVER__ account.</li>
+</ul>
+<h4>You don't see a new feature</h4>
+<ul class="square">
+  <li>Close Fretzpod completely and open it again. Settings -&gt; About shows the version you have.</li>
+</ul>
+
+<h2 id="about">The About screen and the log</h2>
+<p>Choose Settings -&gt; About to see details about Fretzpod on your device. When you ask for help, include a picture of this screen.</p>
+<figure class="screen"><img src="about.webp" alt="The About screen"></figure>
+<table>
+  <tr><th>Item</th><th>What it shows</th></tr>
+  <tr><td>Fretzpod</td><td>The version you're using.</td></tr>
+  <tr><td>Signed in as</td><td>Your __SERVER__ account.</td></tr>
+  <tr><td>Server</td><td>Home or Away, depending on which Fretzpod address you opened.</td></tr>
+  <tr><td>Playback</td><td>How your browser plays music: Stream or Stream (MP4) is normal; Basic means songs play one at a time.</td></tr>
+  <tr><td>Log</td><td>A list of recent events, such as songs starting and anything that went wrong. It stays on your phone and is cleared when you sign out.</td></tr>
+</table>
+<p>If something goes wrong, open the log right afterward and take a picture of it to include with your question.</p>
+</section>
+
+<!-- ======================================================= Chapter 6 -->
+<!-- BEGIN SUPPORT -->
+<section class="chapter" id="support">
+<p class="num">Chapter 6</p>
+<h1>Requesting Music and Support</h1>
+<p>To ask for music that isn't on __SERVER__, or to get help with Fretzpod, contact the person who runs __SERVER__.</p>
+<p>When you ask for help, include:</p>
+<ul class="square">
+  <li>What happened, and what you expected to happen.</li>
+  <li>When it happened.</li>
+  <li>The phone or computer and browser you were using.</li>
+  <li>A picture of Settings -&gt; About, and of the log if something went wrong.</li>
+</ul>
+</section>
+<!-- END SUPPORT -->
+
+<p class="foot">Fretzpod is inspired by the iPod classic. It is not affiliated with or endorsed by Apple.</p>
+</main>
+</body>
+</html>

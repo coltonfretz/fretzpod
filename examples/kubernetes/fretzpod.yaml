@@ -1,6 +1,6 @@
 # Fretzpod: iPod Classic-style music player for Jellyfin. See DESIGN.md.
 # The app files are the ConfigMap `fretzpod-app` (hls.js separately in
-# `fretzpod-vendor`) and the nginx config is `fretzpod-nginx`, all made by
+# `fretzpod-vendor`, the User Guide `fretzpod-guide`) and the nginx config is `fretzpod-nginx`, all made by
 # deploy.sh, so there is no image to build.
 #
 # Example: copy to site/fretzpod.yaml, create the namespace
@@ -51,6 +51,7 @@ spec:
         volumeMounts:
         - {name: app, mountPath: /usr/share/nginx/html, readOnly: true}
         - {name: vendor, mountPath: /usr/share/nginx/vendor, readOnly: true}
+        - {name: guide, mountPath: /usr/share/nginx/guide, readOnly: true}
         - {name: nginx, mountPath: /etc/nginx/conf.d, readOnly: true}
         # nginx-unprivileged keeps its pid file and temp folders in /tmp,
         # the only writable path with the read-only root filesystem.
@@ -60,6 +61,8 @@ spec:
         configMap: {name: fretzpod-app}
       - name: vendor
         configMap: {name: fretzpod-vendor}
+      - name: guide
+        configMap: {name: fretzpod-guide}
       - name: nginx
         configMap: {name: fretzpod-nginx}
       - name: tmp
