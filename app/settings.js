@@ -17,11 +17,13 @@ const DEFS = {
   // vibration motor). Older phones' motors need 20-30 ms just to spin up, so
   // Light can't be felt there at all; Strong is for them.
   haptics: { label: 'Haptics', values: ['light', 'strong', 'off'], names: { light: 'Light', strong: 'Strong', off: 'Off' }, def: 'light' },
-  // Wheel and Selection colors (pod.css, main.js applyBody). Matching / Blue
-  // are the body's own and the iPod's. Wheel is ignored on the prize bodies.
+  // Wheel and Selection colors (pod.css, main.js applyBody). Original / Blue
+  // are the body's own wheel and the iPod's highlight. WHY "Original" and
+  // not "Matching": the real Silver, Blue and Red iPods had white wheels, and
+  // a tester read Matching as "a blue wheel on a blue body" (2026-11-09). Wheel is ignored on the prize bodies.
   wheel: {
     label: 'Wheel', values: ['body', 'white', 'black', 'red', 'blue', 'green', 'purple'],
-    names: { body: 'Matching', white: 'White', black: 'Black', red: 'Red', blue: 'Blue', green: 'Green', purple: site.purpleName },
+    names: { body: 'Original', white: 'White', black: 'Black', red: 'Red', blue: 'Blue', green: 'Green', purple: site.purpleName },
     def: 'body',
   },
   accent: {
@@ -29,13 +31,17 @@ const DEFS = {
     names: { blue: 'Blue', green: 'Green', purple: site.purpleName, red: 'Red', orange: 'Orange', graphite: 'Graphite' },
     def: 'blue',
   },
-  // The screen's colors (main.js applyScreen, pod.css "dark screen"). At
-  // Night: dark from 8 PM to 7 AM by the phone's clock. Match Phone follows
-  // the phone's own dark mode (which may be on a schedule of its own).
+  // The screen's colors (main.js applyScreen, pod.css "dark screen").
+  // Scheduled: dark between darkFrom and darkTo, set by the person ('night'
+  // is its key: it was At Night, fixed 8 PM-7 AM, before 0.24.2; fixed hours
+  // don't suit someone who works nights). Match Phone follows the phone's
+  // own dark mode.
   screen: {
     label: 'Screen', values: ['light', 'dark', 'night', 'phone'],
-    names: { light: 'Light', dark: 'Dark', night: 'At Night', phone: 'Match Phone' }, def: 'light',
+    names: { light: 'Light', dark: 'Dark', night: 'Scheduled', phone: 'Match Phone' }, def: 'light',
   },
+  darkFrom: { label: 'Starts', ...quarterHours(), def: '20:00' },
+  darkTo: { label: 'Ends', ...quarterHours(), def: '07:00' },
   // How long with no input, while music plays, before the Art Screen
   // (sleep.js). The key is still 'sleep': it was called Sleep Screen in 0.21,
   // and renaming the key would lose people's choice.
@@ -82,6 +88,17 @@ function quarterHours() {
 
 // Minutes after midnight for an 'HH:MM' value.
 export const minutesOf = (v) => Number(v.slice(0, 2)) * 60 + Number(v.slice(3));
+
+// Whether now is between two quarter-hour settings (Sleep Mode's and the dark
+// screen's Starts and Ends). Hours that cross midnight wrap; Starts equal to
+// Ends means never.
+export function inHours(fromKey, toKey) {
+  const d = new Date();
+  const now = d.getHours() * 60 + d.getMinutes();
+  const from = minutesOf(settings.get(fromKey));
+  const to = minutesOf(settings.get(toKey));
+  return from < to ? now >= from && now < to : from > to && (now >= from || now < to);
+}
 
 export const BITRATE = { high: 320000, saver: 128000 };
 

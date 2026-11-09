@@ -731,7 +731,7 @@ class CoverFlowScreen {
 }
 
 // Setting a time with the wheel, like the iPod's alarm clock: a quarter
-// hour per tick, center saves, MENU leaves it as it was. key: a setting whose
+// hour per tick; center or MENU keeps it. key: a setting whose
 // values are quarter hours (settings.js quarterHours).
 class TimePicker {
   constructor(title, key) {
@@ -748,10 +748,16 @@ class TimePicker {
     return true;
   }
 
-  select(ui) {
+  // Center and MENU both keep the time shown: a tester set 9:30, pressed
+  // MENU and lost it without a word (2026-11-09).
+  save() {
     settings.set(this.key, this.values[this.i]);
-    ui.back();
+    window.dispatchEvent(new CustomEvent('fp-setting', { detail: this.key }));
   }
+
+  select(ui) { this.save(); ui.back(); }
+
+  back() { this.save(); return false; }
 
   render(view) {
     view.classList.remove('split');
@@ -1092,9 +1098,10 @@ export class UI {
       const has = rows.includes(nowPlaying);
       if (p.playing && !has) rows.push(nowPlaying);
       if (!p.playing && has) rows.splice(rows.indexOf(nowPlaying), 1);
-      // Sleep sits after Shuffle Songs, before Now Playing.
+      // Sleep sits right after Settings, away from Now Playing at the bottom,
+      // so spinning down to Now Playing doesn't land on it (tester, 2026-11-09).
       const wantSleep = settings.get('sleepMode') !== 'off';
-      if (wantSleep && !rows.includes(sleepRow)) rows.splice(rows.findIndex((r) => r.label === 'Shuffle Songs') + 1, 0, sleepRow);
+      if (wantSleep && !rows.includes(sleepRow)) rows.splice(rows.findIndex((r) => r.label === 'Settings') + 1, 0, sleepRow);
       if (!wantSleep && rows.includes(sleepRow)) rows.splice(rows.indexOf(sleepRow), 1);
       list.total = rows.length;
       list.sel = Math.min(list.sel, rows.length - 1);
@@ -1626,28 +1633,36 @@ export class UI {
       opt('body'),
       this.wheelRow(opt('wheel')),
       opt('accent'),
-      opt('screen'),
+      { label: 'Screen', value: () => settings.name('screen'), arrow: true, select: (ui) => ui.push(ui.scheduleMenu(opt, 'Screen', 'screen', 'darkFrom', 'darkTo')) },
       opt('sleep'),
-      { label: 'Sleep Mode', value: () => settings.name('sleepMode'), arrow: true, select: (ui) => ui.push(ui.sleepMenu(opt)) },
-      { label: 'In the car', arrow: true, select: (ui) => ui.push(ui.car()) },
+      { label: 'Sleep Mode', value: () => settings.name('sleepMode'), arrow: true, select: (ui) => ui.push(ui.scheduleMenu(opt, 'Sleep Mode', 'sleepMode', 'sleepFrom', 'sleepTo')) },
+      { label: 'In the Car', arrow: true, select: (ui) => ui.push(ui.car()) },
       { label: 'About', arrow: true, select: (ui) => ui.push(ui.about()) },
       { label: 'Sign Out', arrow: true, select: (ui) => ui.push(ui.confirmSignOut()) },
     );
     return new List('Settings', { rows });
   }
 
-  // Settings > Sleep Mode (sleep.js): Off, By Hand or Scheduled, and the hours
-  // for Scheduled. A time row opens the picker (TimePicker); ⏮/⏭ on it step
-  // a quarter hour without opening it.
-  sleepMenu(opt) {
+  // Settings > Sleep Mode and Settings > Screen: the Mode, plus Starts and
+  // Ends, which only show while Mode is Scheduled (its key is 'night' in
+  // both): elsewhere they'd be rows that do nothing (tester, 2026-11-09). A
+  // time row opens the picker (TimePicker); ⏮/⏭ on it step a quarter hour.
+  scheduleMenu(opt, title, modeKey, fromKey, toKey) {
     const time = (k) => ({
       ...opt(k),
       arrow: true,
       select: (ui) => ui.push(new TimePicker(settings.defs[k].label, k)),
     });
-    return new List('Sleep Mode', {
-      rows: [{ ...opt('sleepMode'), label: 'Mode' }, time('sleepFrom'), time('sleepTo')],
-    });
+    const list = new List(title, { rows: [] });
+    const mode = opt(modeKey);
+    const build = () => {
+      const rows = [{ ...mode, label: 'Mode', select: (ui) => { mode.select(ui); build(); }, step: (dir) => { mode.step(dir); build(); } }];
+      if (settings.get(modeKey) === 'night') rows.push(time(fromKey), time(toKey));
+      list.rows = rows;
+      list.total = rows.length;
+    };
+    build();
+    return list;
   }
 
   // Settings > Wheel: on a prize body it says so instead of a color, since
@@ -1684,7 +1699,7 @@ export class UI {
       store('CarPlay', 'https://apps.apple.com/us/app/jellify/id6736884612'),
     ];
     if (/iPhone|iPad/.test(navigator.userAgent)) stores.reverse();
-    return new List('In the car', {
+    return new List('In the Car', {
       rows: [
         // Big buttons and Now Playing for a phone on the dashboard (carmode.js).
         { label: 'Enter Car Mode', arrow: true, select: () => window.dispatchEvent(new CustomEvent('fp-car', { detail: true })) },

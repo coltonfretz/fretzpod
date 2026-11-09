@@ -12,7 +12,8 @@
 // Starts and Ends times in Settings > Sleep Mode, after a minute with no input.
 //
 // Any touch or key wakes either one, and that first touch only wakes it (it
-// doesn't also scroll or press anything).
+// doesn't also scroll or press anything), except Play/Pause, which also plays
+// or pauses: on a real iPod it always worked (tester, 2026-11-09).
 //
 // WHY a wake lock: the phone's own screen timeout would turn the screen off
 // long before a clock is any use (and it did, mid-lyrics, Colton 2026-11-09).
@@ -23,23 +24,15 @@
 // WHY only on calm screens: menus and Now Playing are fine to cover, but a
 // game, TV, Car Mode, Cover Flow sideways or lyrics being read are not.
 import * as api from './api.js';
-import { settings, minutesOf } from './settings.js';
+import { settings, inHours } from './settings.js';
 import { el, log } from './util.js';
 
 const ART_AFTER = { s30: 30e3, m2: 120e3 };
 const CLOCK_AFTER = 60e3;           // Scheduled: a minute with no input
 const CLOCK_MOVE_MS = 60e3;         // the time moves a little each minute (burn-in)
 
-// Inside the Starts-Ends hours (Settings > Sleep Mode). Hours that cross
-// midnight (10 PM to 7 AM) wrap; Starts equal to Ends means never.
-function scheduled() {
-  if (settings.get('sleepMode') !== 'night') return false;
-  const d = new Date();
-  const now = d.getHours() * 60 + d.getMinutes();
-  const from = minutesOf(settings.get('sleepFrom'));
-  const to = minutesOf(settings.get('sleepTo'));
-  return from < to ? now >= from && now < to : from > to && (now >= from || now < to);
-}
+// Scheduled, and inside its Starts-Ends hours (Settings > Sleep Mode).
+const scheduled = () => settings.get('sleepMode') === 'night' && inHours('sleepFrom', 'sleepTo');
 
 export class Sleep {
   // screenEl: #screen. hooks.calm(): the screen showing may be covered
@@ -89,8 +82,10 @@ export class Sleep {
     const lift = () => { if (this.swallowing) setTimeout(() => { this.swallowing = false; }, 0); };
     document.addEventListener('pointerup', lift, true);
     document.addEventListener('pointercancel', lift, true);
+    // Space (play/pause) wakes it and still plays or pauses, like the wheel's
+    // Play/Pause (main.js); every other key only wakes it.
     window.addEventListener('keydown', (e) => {
-      if (input()) { e.preventDefault(); e.stopImmediatePropagation(); }
+      if (input() && e.key !== ' ') { e.preventDefault(); e.stopImmediatePropagation(); }
     }, true);
 
     // A new song changes the art; the music stopping ends the Art Screen

@@ -1,7 +1,7 @@
 // Wires the pieces together: settings -> body color, the player, the wheel,
 // the screen stack, sign-in/out, and the battery icon.
 import * as api from './api.js';
-import { settings, BITRATE } from './settings.js';
+import { settings, BITRATE, inHours } from './settings.js';
 import { Player, streamType } from './player.js';
 import { Wheel } from './wheel.js';
 import { UI } from './ui.js';
@@ -30,19 +30,16 @@ applyBody();
 window.addEventListener('fp-setting', (e) => { if (['body', 'wheel', 'accent'].includes(e.detail)) applyBody(); });
 
 // Settings > Screen: light or dark menus (pod.css "dark screen").
-const NIGHT_FROM = 20;   // 8 PM
-const NIGHT_TO = 7;      // 7 AM
 const phoneDark = matchMedia('(prefers-color-scheme: dark)');
 function applyScreen() {
   const v = settings.get('screen');
-  const h = new Date().getHours();
-  const dark = v === 'dark' || (v === 'night' && (h >= NIGHT_FROM || h < NIGHT_TO)) || (v === 'phone' && phoneDark.matches);
+  const dark = v === 'dark' || (v === 'night' && inHours('darkFrom', 'darkTo')) || (v === 'phone' && phoneDark.matches);
   document.documentElement.dataset.screen = dark ? 'dark' : 'light';
 }
 applyScreen();
-window.addEventListener('fp-setting', (e) => { if (e.detail === 'screen') applyScreen(); });
+window.addEventListener('fp-setting', (e) => { if (['screen', 'darkFrom', 'darkTo'].includes(e.detail)) applyScreen(); });
 phoneDark.addEventListener('change', applyScreen);
-// At Night turns over on the hour; a minute's check catches it, and a phone
+// Scheduled turns over at its times; a minute's check catches it, and a phone
 // waking from sleep fires visibilitychange before anyone looks.
 setInterval(applyScreen, 60000);
 document.addEventListener('visibilitychange', applyScreen);
@@ -64,7 +61,8 @@ const target = () => (car && !car.root.hidden ? car : ui);
 const awake = () => !sleep?.swallow();
 const wheel = new Wheel($('#wheel'), $('#center'), {
   turn: (dir) => awake() && target().turn(dir),
-  press: (b) => awake() && target().press(b),
+  // Play/Pause still works on the touch that wakes it (sleep.js).
+  press: (b) => (b === 'play' || awake()) && target().press(b),
   hold: (b) => awake() && target().hold(b),
   holdEnd: (b) => awake() && target().holdEnd(b),
   raw: () => target().raw?.() === true,
@@ -115,7 +113,7 @@ const cf = new CoverFlow($('#coverflow'), {
   play: (items, i) => ui.playSongs(items, i),
   tick: () => wheel.feedback(),
 });
-// Car mode (Settings > In the car) wins over everything: half of a split screen
+// Car mode (Settings > In the Car) wins over everything: half of a split screen
 // is often wider than tall, which would otherwise read as "sideways" and open
 // Cover Flow next to Maps.
 car = new CarMode($('#car'), {
