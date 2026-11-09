@@ -255,7 +255,7 @@ export class Wheel {
     for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 3) * 0.5;
   }
 
-  // Fishing Trip's bite (Colton, 2026-11-08): the playtest found the bite
+  // Fishing Trip's bite: the playtest found the bite
   // buzzed the same 8 ms as every reel tick, so mid-reel it got lost. Now a
   // double pulse, and a water drop sound with the Clicker on. The drop is a
   // sine sweeping up fast and dying away, made here so there's no sound file.

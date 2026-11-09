@@ -53,7 +53,7 @@ const DEFS = {
   // Sleep in the main menu), or also on its own between two times. Off by
   // default. 'night' is the key for Scheduled (it was At Night, fixed hours,
   // before 0.24.1); the hours are Starts and Ends below, set by the person
-  // (Colton works nights, 2026-11-09).
+  // (fixed night hours don't suit someone who works nights).
   sleepMode: {
     label: 'Sleep Mode', values: ['off', 'hand', 'night'],
     names: { off: 'Off', hand: 'By Hand', night: 'Scheduled' }, def: 'off',

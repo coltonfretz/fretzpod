@@ -1,4 +1,4 @@
-// Prize bodies for Settings > Body (Colton, 2026-11-08): a gold iPod for a
+// Prize bodies for Settings > Body: a gold iPod for a
 // huge lifetime total in each game, each with that game's symbol pressed
 // into the bottom right corner (two flippers, a golf club, a fishing rod),
 // and a clear case showing the insides for having all three.

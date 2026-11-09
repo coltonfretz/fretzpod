@@ -16,7 +16,7 @@
 // or pauses: on a real iPod it always worked (tester, 2026-11-09).
 //
 // WHY a wake lock: the phone's own screen timeout would turn the screen off
-// long before a clock is any use (and it did, mid-lyrics, Colton 2026-11-09).
+// long before a clock is any use (it did, mid-lyrics).
 // The screen is kept on while Sleep Mode shows, through the scheduled hours,
 // and while the lyrics are up. Browsers only allow it on https, so
 // the home http copy still times out.

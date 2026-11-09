@@ -1,5 +1,5 @@
 // Star Pinball: a space pinball table for the click wheel, in Extras with
-// Fishing Trip and Tiki Golf. It replaced Vortex (2026-11-08): Colton wanted
+// Fishing Trip and Tiki Golf. It replaced Vortex: the ask was
 // a pinball game in the spirit of the old Windows space pinball. Original
 // table, rules and art; nothing is copied from that game.
 //
@@ -10,16 +10,16 @@
 // pull the plunger back, let go to launch: the longer the pull, the harder
 // the shot. Play/pause, or MENU held, opens the pause menu (pause.js, the
 // same in all three games); a MENU tap mid-game only says to hold it
-// (Colton, 2026-11-08: a thumb slipping up off a flipper quit the game).
+// (a thumb slipping up off a flipper quit the game).
 // While paused the wheel works normally (not raw), so it can pick Resume or
 // Quit game.
 //
 // The table is drawn in perspective, looking up it from behind the
 // flippers: the far end is narrower and the ball gets smaller as it rolls
-// away (Colton, 2026-11-08: the flat first version felt too 2D). Walls,
+// away (the flat first version felt too 2D). Walls,
 // bumpers and the ramp have height, and the ball has a shadow.
 //
-// Three tables and five balls (Colton, 2026-11-08: points unlock two more
+// Three tables and five balls (points unlock two more
 // maps and different balls). Every point scored adds to a running total
 // kept on the phone; a table or ball opens once the total reaches its
 // `need`. The balls only look different, so scores stay comparable on the

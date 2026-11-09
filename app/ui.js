@@ -1619,8 +1619,8 @@ export class UI {
       label: settings.defs[k].label,
       value: () => settings.name(k),
       select: () => { settings.cycle(k); window.dispatchEvent(new CustomEvent('fp-setting', { detail: k })); },
-      // ⏮/⏭ step back or on through the values, wrapping round (Colton,
-      // 2026-11-08: with up to nine bodies, one way round was a long trip).
+      // ⏮/⏭ step back or on through the values, wrapping round
+      // (with up to nine bodies, one way round was a long trip).
       step: (dir) => { settings.cycle(k, dir); window.dispatchEvent(new CustomEvent('fp-setting', { detail: k })); },
     });
     const rows = [opt('shuffle'), opt('repeat'), opt('quality'), opt('clicker')];

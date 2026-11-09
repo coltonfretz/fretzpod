@@ -1,7 +1,7 @@
 // Fishing Trip: fishing from the shore, in Extras with Star Pinball and Tiki
-// Golf. It replaced Space Sheep (2026-11-08): Colton found Space Sheep asked
-// for too many buttons in too small a ring, and wanted fishing that plays
-// like the old console RPG minigames he liked, where the fun is spotting the
+// Golf. It replaced Space Sheep, which asked for too many
+// buttons in too small a ring. The ask: fishing that plays like the old
+// console RPG minigames, where the fun is spotting the
 // fish you want, getting it to take the lure, and collecting every kind.
 // Original fish art, places and rules; nothing is copied from any game.
 //
@@ -21,7 +21,7 @@
 //   too slack lets the fish throw the hook. Tapping center during a run
 //   jerks the rod and breaks the fish's pull.
 // - MENU: the thumb taps the ring a lot to keep the tension right, and a
-//   light tap at the top counts as MENU (Colton, 2026-11-08: it kept
+//   light tap at the top counts as MENU (it kept
 //   dropping him out mid-fight). So a tap only says "Hold MENU to pause",
 //   and holding it opens the pause menu (pause.js, the same in all three
 //   games), which is where you leave from.
@@ -621,7 +621,7 @@ export class Fishing {
     this.pause.draw(g, w, h);
   }
 
-  // The bite's "!" (Colton, 2026-11-08: the size is right, but it blended
+  // The bite's "!" (the size is right, but it blended
   // into the water). Same size, now gold with a dark outline so it reads on
   // any water, popping in a little big with a quick flash ring behind it.
   drawBang(g, x, y, h, age) {

@@ -1,4 +1,4 @@
-// The pause menu all three games share (Colton, 2026-11-08). A fresh-eyes
+// The pause menu all three games share. A fresh-eyes
 // playtest found MENU did something different in each game: Star Pinball
 // quit on one tap (a thumb slipping up off a flipper ended the run), Fishing
 // Trip wanted MENU held to leave, and Tiki Golf paused. Now they all work
