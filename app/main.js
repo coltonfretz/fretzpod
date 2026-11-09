@@ -11,6 +11,7 @@ import { Output } from './speakers.js';
 import { log } from './util.js';
 import { applyBodyExtras } from './bodies.js';
 import { Sleep } from './sleep.js';
+import { Alarms } from './alarms.js';
 
 const $ = (s) => document.querySelector(s);
 
@@ -155,6 +156,13 @@ sleep = new Sleep($('#screen'), player, {
 });
 window.addEventListener('fp-sleep', () => sleep.showClock());
 
+// Extras > Alarms: the alarm wakes the screen and starts its music; the
+// sleep timer stops the music (alarms.js).
+ui.alarms = new Alarms(player, {
+  wake: () => sleep.wake(),
+  start: (plays) => ui.alarmMusic(plays),
+});
+
 // Test hook for the dev server only (Claude's browser pane has no rotation).
 if (location.hostname === 'localhost') {
   window.fpDebug = {
@@ -165,6 +173,7 @@ if (location.hostname === 'localhost') {
     // Tiki Golf: fpDebug.golf().startHole(6) jumps to hole 7.
     golf() { return ui.top; },
     sleep: () => sleep,
+    alarms: () => ui.alarms,
   };
 }
 

@@ -18,6 +18,7 @@ import { Tv, tvData } from './tv.js';
 import { Golf, SHOP, golfSave, shopPick, courseOpen } from './golf.js';
 import { COURSES } from './golf-holes.js';
 import { CoverFlow } from './coverflow.js';
+import { TIMER_CHOICES } from './alarms.js';
 
 const ROWS = 8;            // like the iPod Classic's 320x240 screen
 const PAGE = 100;
@@ -741,8 +742,9 @@ class CoverFlowScreen {
   leave() { this.cf.hide(); }
 }
 
-// Setting a time with the wheel, like the iPod's alarm clock: a quarter
-// hour per tick; center or MENU keeps it. key: a setting whose
+// Setting a time with the wheel, like the iPod's alarm clock: one step of the
+// setting's values per tick (a quarter hour, or 5 minutes for the alarm);
+// center or MENU keeps it. key: a setting whose
 // values are quarter hours (settings.js quarterHours).
 class TimePicker {
   constructor(title, key) {
@@ -1341,8 +1343,70 @@ export class UI {
         { label: 'Fishing Trip', arrow: true, select: (ui) => ui.push(ui.fishing()) },
         { label: 'Tiki Golf', arrow: true, select: (ui) => ui.push(ui.golf()) },
         { label: 'High Scores', arrow: true, select: (ui) => ui.push(ui.highScores()) },
+        { label: 'Alarms', arrow: true, select: (ui) => ui.push(ui.alarmsMenu()) },
       ],
     });
+  }
+
+  // Extras > Alarms (alarms.js; this.alarms is set by main.js): the alarm,
+  // its time, repeat and music, and the sleep timer.
+  alarmsMenu() {
+    const a = this.alarms;
+    const opt = (k) => this.settingRow(k);
+    return new List('Alarms', {
+      rows: [
+        opt('alarmOn'),
+        { ...opt('alarmTime'), arrow: true, select: (ui) => ui.push(new TimePicker('Alarm Time', 'alarmTime')) },
+        opt('alarmRepeat'),
+        { label: 'Plays', value: () => a.plays.name, arrow: true, select: (ui) => ui.push(ui.alarmPlays()) },
+        { label: 'Sleep Timer', value: () => a.timerText(), arrow: true, select: (ui) => ui.push(ui.sleepTimer()) },
+      ],
+    });
+  }
+
+  // What the alarm plays: Shuffle Songs, Favorites (shuffled) or a playlist.
+  alarmPlays() {
+    const a = this.alarms;
+    const pick = (plays) => ({
+      label: plays.name,
+      value: () => (a.plays.kind === plays.kind && a.plays.id === plays.id ? '✓' : ''),
+      select: (ui) => { a.plays = plays; ui.back(); },
+    });
+    return new List('Plays', {
+      fetch: () => api.playlists().then((d) => {
+        const rows = [pick({ kind: 'shuffle', name: 'Shuffle Songs' }), pick({ kind: 'favorites', name: 'Favorites' }),
+          ...d.Items.map((pl) => pick({ kind: 'playlist', id: pl.Id, name: pl.Name }))];
+        return { rows, total: rows.length };
+      }),
+    });
+  }
+
+  sleepTimer() {
+    return new List('Sleep Timer', {
+      rows: TIMER_CHOICES.map((c) => ({
+        label: c.name,
+        select: (ui) => {
+          ui.alarms.setTimer(c.id);
+          ui.back();
+          if (c.id !== 'off') ui.toast(c.id === 'song' ? 'Stops after this song' : `Stops in ${c.name.toLowerCase()}`);
+        },
+      })),
+    });
+  }
+
+  // The alarm's music (alarms.js ring()).
+  alarmMusic(plays) {
+    if (plays.kind === 'shuffle') { this.shuffleSongs(); return; }
+    const load = plays.kind === 'favorites' ? api.favoriteSongs() : api.playlistSongs(plays.id);
+    load.then((d) => {
+      if (!d.Items.length) { this.shuffleSongs(); return; }   // an empty pick still wakes you
+      this.player.play(d.Items, 0, { shuffle: plays.kind === 'favorites' || settings.get('shuffle') === 'songs' });
+      this.showNowPlaying();
+    }).catch((e) => { log(`alarm music: ${e.message}`); this.shuffleSongs(); });
+  }
+
+  showNowPlaying() {
+    if (!(this.top instanceof NowPlaying)) this.push(new NowPlaying(this.player));
   }
 
   // The shared boards (scores.js): pick a game, see its top 10 and, further
@@ -1392,14 +1456,14 @@ export class UI {
   // rather than stacking a second one.
   playSongs(items, i) {
     this.player.play(items, i, { shuffle: settings.get('shuffle') === 'songs' });
-    if (!(this.top instanceof NowPlaying)) this.push(new NowPlaying(this.player));
+    this.showNowPlaying();
   }
 
   shuffleSongs() {
     api.randomSongs(100).then((d) => {
       if (!d.Items.length) return;
       this.player.play(d.Items, 0, { refill: () => api.randomSongs(100).then((r) => r.Items) });
-      this.push(new NowPlaying(this.player));
+      this.showNowPlaying();
     }).catch((e) => log(`shuffle: ${e.message}`));
   }
 
@@ -1637,15 +1701,20 @@ export class UI {
     });
   }
 
-  settings() {
-    const opt = (k) => ({
+  // A row for one setting: center goes on to the next value, ⏮/⏭ step back
+  // or on, wrapping round (with up to nine bodies, one way round was a long
+  // trip).
+  settingRow(k) {
+    return {
       label: settings.defs[k].label,
       value: () => settings.name(k),
       select: () => { settings.cycle(k); window.dispatchEvent(new CustomEvent('fp-setting', { detail: k })); },
-      // ⏮/⏭ step back or on through the values, wrapping round
-      // (with up to nine bodies, one way round was a long trip).
       step: (dir) => { settings.cycle(k, dir); window.dispatchEvent(new CustomEvent('fp-setting', { detail: k })); },
-    });
+    };
+  }
+
+  settings() {
+    const opt = (k) => this.settingRow(k);
     const rows = [opt('shuffle'), opt('repeat'), opt('quality'), opt('clicker')];
     // Firefox on Android ignores web vibration (and Safari has none), so say
     // so rather than offer a setting that does nothing.

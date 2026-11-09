@@ -26,6 +26,7 @@ Inspired by the iPod Classic. Not affiliated with or endorsed by Apple.
 - **Dark screen:** Settings -> Screen -> Mode: Light, Dark, Scheduled (dark between the Starts and Ends times you set) or Match Phone. Car Mode follows it too.
 - **Art Screen:** Settings -> Art Screen: after 30 seconds or 2 minutes with no input while music plays, the screen shows just the album art on black and the wheel dims. The first touch only wakes it.
 - **Sleep Mode** (off unless you turn it on): the whole screen goes black with only the time in dim gray, like a bedside clock, and the music keeps playing. Settings -> Sleep Mode -> Mode: By Hand (hold Play/Pause for about a second, like switching the old iPod off, or pick Sleep in the main menu) or Scheduled (also on its own between the Starts and Ends times, after a minute with no input; turn the wheel to set them, a quarter hour at a time, and center or MENU keeps the time). Play/Pause works even on the Art Screen; other buttons there only wake it. The screen stays on while it shows, through the scheduled hours, and while the lyrics are up (https copies only; browsers don't allow it on plain http).
+- **Alarms** (Extras -> Alarms): an alarm that wakes you with Shuffle Songs, Favorites or a playlist, starting quiet and rising (once or every day, set in 5-minute steps), and a sleep timer (15 minutes to 2 hours, or the end of the song) that fades the music out. The alarm only rings with Fretzpod open and the screen on (Sleep Mode keeps it on), since a web page can't wake a phone; use the phone's Clock app for an alarm that has to work.
 - **Body colors:** silver, black, blue, red, purple. Settings -> Wheel gives the wheel a color of its own (Original is the wheel the body came with), and Settings -> Selection changes the highlight color (the gold and clear prize bodies keep their own wheel, but take the highlight color). Plus prizes: a gold body for a huge lifetime total in each game, with that game's symbol pressed into the corner, and a clear case showing the insides for all three.
 - **Private:** no play reporting to Jellyfin, no access log, no analytics, nothing loaded from outside your server. See DESIGN.md, "Privacy".
 
@@ -108,7 +109,8 @@ It asks for a Jellyfin admin API key (only to make its own key) and a Home Assis
 | `app/api.js`, `app/config.js` | Jellyfin calls and sign-in; the site settings (replaced by the build). |
 | `app/pinball.js`, `app/fishing.js`, `app/golf.js`, `app/pause.js`, `app/scores.js` | The games, their shared pause menu and the high score boards. |
 | `app/bodies.js` | The prize bodies: gold per game and the clear case. |
-| `app/sleep.js` | The sleep screen. |
+| `app/sleep.js` | The Art Screen and Sleep Mode. |
+| `app/alarms.js` | The alarm and the sleep timer. |
 | `app/tv.js`, `app/speakers.js` | The optional TV and Speakers. |
 | `app/vendor/` | hls.js 1.7.3 (for TV), Apache 2.0. |
 | `nginx/default.conf` | nginx config template with the Content Security Policy. |

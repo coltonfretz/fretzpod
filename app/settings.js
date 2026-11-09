@@ -59,6 +59,10 @@ const DEFS = {
     names: { off: 'Off', hand: 'By Hand', night: 'Scheduled' }, def: 'off',
   },
   sleepFrom: { label: 'Starts', ...quarterHours(), def: '22:00' },
+  // Extras > Alarms (alarms.js). Time in 5-minute steps.
+  alarmOn: { label: 'Alarm', values: ['off', 'on'], names: { off: 'Off', on: 'On' }, def: 'off' },
+  alarmTime: { label: 'Time', ...quarterHours(5), def: '07:00' },
+  alarmRepeat: { label: 'Repeat', values: ['daily', 'once'], names: { daily: 'Every Day', once: 'Once' }, def: 'daily' },
   sleepTo: { label: 'Ends', ...quarterHours(), def: '07:00' },
   // The gold bodies and the clear case are prizes from the games (bodies.js):
   // they're only offered once open.
@@ -72,13 +76,14 @@ const DEFS = {
   },
 };
 
-// Every quarter hour of the day as a setting's values ('HH:MM', 24-hour, so
-// they sort and compare), shown in the phone's own clock style ("10:00 PM").
-// A function declaration, so DEFS above can use it before this line.
-function quarterHours() {
+// Every quarter hour (or every `step` minutes) of the day as a setting's
+// values ('HH:MM', 24-hour, so they sort and compare), shown in the phone's
+// own clock style ("10:00 PM"). A function declaration, so DEFS above can
+// use it before this line.
+function quarterHours(step = 15) {
   const values = [];
   const names = {};
-  for (let m = 0; m < 1440; m += 15) {
+  for (let m = 0; m < 1440; m += step) {
     const v = `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
     values.push(v);
     names[v] = new Date(2000, 0, 1, Math.floor(m / 60), m % 60).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
