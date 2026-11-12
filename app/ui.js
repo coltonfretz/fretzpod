@@ -6,7 +6,7 @@
 // as the selection gets near them.
 import * as api from './api.js';
 import { settings } from './settings.js';
-import { el, fmt, log, logLines, prettyGenre } from './util.js';
+import { el, fmt, log, logLines, prettyGenre, canVibrate } from './util.js';
 import { StarPinball, PINBALL_TABLES, PINBALL_BALLS, pinballSave, pinballOpen, lockText } from './pinball.js';
 import { goldProgress, goldId, bodyOpen } from './bodies.js';
 import { Fishing, FISH_SPOTS, FISH_LURES, FISH_KINDS, fishSave, fishOpen, fishLockText } from './fishing.js';
@@ -1717,9 +1717,10 @@ export class UI {
     const opt = (k) => this.settingRow(k);
     const rows = [opt('shuffle'), opt('repeat'), opt('quality'), opt('clicker')];
     // Firefox on Android ignores web vibration (and Safari has none), so say
-    // so rather than offer a setting that does nothing.
+    // so rather than offer a setting that does nothing. The Android app
+    // vibrates natively, whatever browser the phone uses.
     const firefox = /Firefox\//.test(navigator.userAgent);
-    if (navigator.vibrate && !firefox) rows.push(opt('haptics'));
+    if (canVibrate) rows.push(opt('haptics'));
     else rows.push({ label: 'Haptics', value: () => (firefox ? 'Not in Firefox' : 'Not supported') });
     rows.push(
       opt('body'),

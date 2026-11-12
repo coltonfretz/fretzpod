@@ -114,3 +114,18 @@ export function clearLog() { lines = []; store.del(LOG_KEY); }
 // " (screen off)" while the page is hidden, else "": tacked onto log lines,
 // since screen-off playback is what the log is mostly for.
 export const screenOffNote = () => (document.visibilityState === 'hidden' ? ' (screen off)' : '');
+
+// Vibration. Inside the Android app (android/), the page gets a native hook,
+// FretzpodAndroid, that drives the phone's vibrator directly: it works with
+// no user tap first and whatever the phone's default browser is. In a
+// browser it's the Vibration API, which Safari and Firefox don't offer.
+const nativeShell = typeof window !== 'undefined' ? window.FretzpodAndroid : undefined;
+export const inAndroidApp = !!nativeShell;
+export const canVibrate = inAndroidApp
+  || (typeof navigator !== 'undefined' && !!navigator.vibrate && !/Firefox\//.test(navigator.userAgent));
+export function vibrate(pattern) {
+  if (nativeShell) {
+    try { nativeShell.vibrate(JSON.stringify([].concat(pattern))); return true; } catch { return false; }
+  }
+  return navigator.vibrate ? navigator.vibrate(pattern) : false;
+}

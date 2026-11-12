@@ -15,7 +15,7 @@
 // the ring doesn't turn. A normal press only counts when the thumb lifts,
 // which is far too late for a flipper.
 
-import { log } from './util.js';
+import { log, canVibrate, vibrate } from './util.js';
 
 const TICK = (2 * Math.PI) / 24;
 const TAP_SLOP = 0.18;     // radians (~10°) of turning before a touch stops being a press
@@ -261,7 +261,7 @@ export class Wheel {
   // sine sweeping up fast and dying away, made here so there's no sound file.
   bite() {
     const level = this.prefs.haptics();
-    if (level !== 'off' && navigator.vibrate) navigator.vibrate(level === 'strong' ? [35, 70, 35] : [14, 70, 14]);
+    if (level !== 'off' && canVibrate) vibrate(level === 'strong' ? [35, 70, 35] : [14, 70, 14]);
     if (!this.prefs.clicker() || !this.audio) return;
     const a = this.audio, t = a.currentTime;
     if (a.state === 'suspended') a.resume();
@@ -288,8 +288,8 @@ export class Wheel {
       src.start();
     }
     const level = this.prefs.haptics();
-    if (level !== 'off' && navigator.vibrate) {
-      const ok = navigator.vibrate(level === 'strong' ? (press ? 40 : 25) : (press ? 14 : 8));
+    if (level !== 'off' && canVibrate) {
+      const ok = vibrate(level === 'strong' ? (press ? 40 : 25) : (press ? 14 : 8));
       // vibrate() returns false when the browser refuses (no tap on the page
       // yet, page hidden, ...). Logged once per run so Settings > About > Log
       // can tell "Chrome refused" apart from "Chrome accepted but the phone
