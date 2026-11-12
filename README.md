@@ -10,7 +10,7 @@ Inspired by the iPod Classic. Not affiliated with or endorsed by Apple.
 
 ## What it does
 
-- **Click wheel** that tracks your thumb, with a click sound and a haptic tick on Android. On a computer, the arrow keys and the scroll wheel turn it.
+- **Click wheel** that tracks your thumb, with a click sound and a haptic tick on Android (on iPhone, iOS 18 or later, haptics are being tested). On a computer, the arrow keys and the scroll wheel turn it.
 - **The iPod menus:** Music (Cover Flow, Playlists, Artists, Albums, Songs, Genres, Favorites, Search), Shuffle Songs, Now Playing, Extras, Settings.
 - **Cover Flow:** turn the phone sideways, or pick Music -> Cover Flow to flip through covers with the wheel with the phone upright (spin fast to jump a letter at a time; center turns a cover over to its songs). Albums with fewer than 4 songs (compilation one-offs) stay out of it; their songs are still under Artists, Songs and Genres.
 - **Hold the center on a song, album, artist or playlist** for a menu: Play Next, Play Later, Instant Mix (Jellyfin's songs-like-this), Add to Playlist, Favorites, Go to Artist, Go to Album.

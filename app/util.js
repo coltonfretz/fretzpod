@@ -115,17 +115,58 @@ export function clearLog() { lines = []; store.del(LOG_KEY); }
 // since screen-off playback is what the log is mostly for.
 export const screenOffNote = () => (document.visibilityState === 'hidden' ? ' (screen off)' : '');
 
-// Vibration. Inside the Android app (android/), the page gets a native hook,
-// FretzpodAndroid, that drives the phone's vibrator directly: it works with
-// no user tap first and whatever the phone's default browser is. In a
-// browser it's the Vibration API, which Safari and Firefox don't offer.
+// Vibration, three ways:
+// - Inside the Android app (android/), the page gets a native hook,
+//   FretzpodAndroid, that drives the phone's vibrator directly.
+// - In Chrome on Android, the Vibration API. Firefox ignores it.
+// - On iPhone, Safari has no Vibration API, but since iOS 18 toggling a
+//   switch-style checkbox (<input type=checkbox switch>) gives the system's
+//   haptic tick, and clicking its label does too. So a tick is a click on a
+//   hidden one. Untested on a real iPhone: iOS may only allow it during a
+//   tap, not a finger sliding round the wheel (see DESIGN.md, "iPhone").
 const nativeShell = typeof window !== 'undefined' ? window.FretzpodAndroid : undefined;
 export const inAndroidApp = !!nativeShell;
-export const canVibrate = inAndroidApp
-  || (typeof navigator !== 'undefined' && !!navigator.vibrate && !/Firefox\//.test(navigator.userAgent));
+const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
+// iPadOS says it's a Mac; touch points give it away.
+const ios = /iPhone|iPad/.test(ua) || (/Macintosh/.test(ua) && typeof navigator !== 'undefined' && navigator.maxTouchPoints > 1);
+// The switch's haptic arrived in iOS 18 (the version in the user agent stays
+// 18 on later ones). Not feature-tested: an iOS 17 switch exists but is silent.
+const iosMajor = +((ua.match(/OS (\d+)_/) || ua.match(/Version\/(\d+)/) || [])[1] || 0);
+const iosSwitch = ios && iosMajor >= 18;
+export const canVibrate = inAndroidApp || iosSwitch
+  || (typeof navigator !== 'undefined' && !!navigator.vibrate && !/Firefox\//.test(ua));
+
+let tickLabel = null;
+function iosTick() {
+  if (!tickLabel) {
+    tickLabel = document.createElement('label');
+    tickLabel.hidden = true;
+    tickLabel.setAttribute('aria-hidden', 'true');
+    const box = document.createElement('input');
+    box.type = 'checkbox';
+    box.setAttribute('switch', '');
+    box.tabIndex = -1;
+    tickLabel.appendChild(box);
+    document.head.appendChild(tickLabel);
+  }
+  tickLabel.click();
+}
+
 export function vibrate(pattern) {
   if (nativeShell) {
     try { nativeShell.vibrate(JSON.stringify([].concat(pattern))); return true; } catch { return false; }
+  }
+  if (iosSwitch) {
+    // The tick has one strength, so a pattern becomes one tick per buzz
+    // ([14, 70, 14] is two ticks 84 ms apart).
+    const p = [].concat(pattern);
+    try {
+      iosTick();
+      for (let i = 2, at = p[0] + (p[1] || 0); i < p.length; i += 2, at += p[i - 2] + (p[i - 1] || 0)) {
+        setTimeout(iosTick, at);
+      }
+      return true;
+    } catch { return false; }
   }
   return navigator.vibrate ? navigator.vibrate(pattern) : false;
 }

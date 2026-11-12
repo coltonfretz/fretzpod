@@ -52,7 +52,7 @@ Measured in real engines with Playwright:
 
 So `app/mp4mux.js` rewraps Jellyfin's ADTS AAC into fragmented MP4 in the page: frames copied byte for byte, no re-encoding (checked sample-identical against the original). Format order: AAC, then MP4, then MP3; a format that claims support but errors hands over to the next, then basic mode. Settings > About shows which one a device got.
 
-- **iPhone:** iOS doesn't let a page set the volume, so on Now Playing the wheel scrubs instead and the phone's buttons do volume. Safari has no web vibration, so iPhones get the click sound only and the Haptics setting is hidden.
+- **iPhone:** iOS doesn't let a page set the volume, so on Now Playing the wheel scrubs instead and the phone's buttons do volume. Safari has no web vibration. On iOS 18 and later, Haptics uses a workaround instead: toggling a switch-style checkbox gives the system's haptic tick, so each tick clicks a hidden one (`app/util.js`, `vibrate()`). Not yet confirmed on a real iPhone; the open question is whether iOS allows it while a finger slides round the wheel, or only on a tap (button presses). `tools/engines/haptics-check.mjs` checks the mechanics in WebKit; only a phone can tell whether it buzzes. iOS 17 and older get the click sound only and the Haptics setting is hidden.
 - **Computers:** arrow keys turn the wheel, left/right are previous/next, Enter is the center button, Space is play/pause, Esc or Backspace is MENU. The mouse or trackpad scroll wheel turns it too.
 - `tools/engines` holds the Playwright checks (`sweep.mjs` walks the whole app in Firefox and WebKit dressed as an iPhone).
 
