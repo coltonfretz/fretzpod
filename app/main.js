@@ -163,7 +163,13 @@ async function checkServer(pressed = false) {
   ui.push(downScreen);
 }
 window.addEventListener('online', checkServer);
-window.addEventListener('offline', checkServer);
+// Turning Wi-Fi off goes offline for a moment before mobile data takes
+// over; wait that out instead of flashing the screen open and shut.
+let offlineTimer = null;
+window.addEventListener('offline', () => {
+  clearTimeout(offlineTimer);
+  offlineTimer = setTimeout(checkServer, 4000);
+});
 window.addEventListener('fp-loadfail', checkServer);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) checkServer(); });
 
