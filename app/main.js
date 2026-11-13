@@ -99,10 +99,64 @@ form.addEventListener('submit', async (e) => {
   }
 });
 
-ui = new UI($('#screen'), { player, wheel, onPassword: showPassword });
+// ---------- the app build: which server (api.js BYOS) ----------
+
+const srvOverlay = $('#srv-overlay');
+const srvAddr = $('#srv-addr');
+function showServer() {
+  srvOverlay.hidden = false;
+  $('#srv-error').textContent = '';
+  srvAddr.value = api.hasServer() ? api.JF.replace(/^https:\/\//, '') : '';
+  srvAddr.focus();
+}
+$('#srv-cancel').addEventListener('click', () => { srvOverlay.hidden = true; });
+$('#srv-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const go = $('#srv-go');
+  go.disabled = true;
+  $('#srv-error').textContent = 'Looking…';
+  try {
+    api.useServer(await api.findServer(srvAddr.value));
+    srvOverlay.hidden = true;
+  } catch (err) {
+    $('#srv-error').textContent = err.message;
+  } finally {
+    go.disabled = false;
+  }
+});
+
+ui = new UI($('#screen'), { player, wheel, onPassword: showPassword, onServer: showServer });
 window.addEventListener('fp-signin', () => ui.reset(ui.home()));
 window.addEventListener('fp-signout', () => { player.stop(); ui.reset(ui.signIn()); });
-ui.reset(api.getSession() ? ui.home() : ui.signIn());
+window.addEventListener('fp-server', () => {
+  $('#server-name').textContent = api.SERVER_NAME;
+  if (!api.getSession()) ui.reset(ui.signIn());
+});
+
+// Signed in but the server doesn't answer (down, or the phone is offline):
+// say so, instead of menus that each fail on their own. Only replaces the
+// home menu if nobody has moved on from it yet; tries again by itself when
+// the phone's connection comes back.
+let downScreen = null;
+async function checkServer(shown) {
+  if (await api.reachable()) {
+    if (downScreen && ui.top === downScreen) { downScreen = null; ui.reset(ui.home()); }
+    return;
+  }
+  if (!api.getSession() || (ui.top !== shown && ui.top !== downScreen)) return;
+  log("server didn't answer");
+  downScreen = ui.unreachable(() => checkServer(downScreen));
+  ui.reset(downScreen);
+}
+window.addEventListener('online', () => { if (downScreen && ui.top === downScreen) checkServer(downScreen); });
+
+if (api.getSession()) {
+  const first = ui.home();
+  ui.reset(first);
+  checkServer(first);
+} else {
+  ui.reset(ui.signIn());
+}
 
 // ---------- Cover Flow: a touch phone turned sideways ----------
 
@@ -198,7 +252,8 @@ if (navigator.getBattery) {
 
 // Installable app + offline shell. Browsers only allow service workers on
 // https, so a plain http copy of the app skips it.
-if ('serviceWorker' in navigator && window.isSecureContext && location.hostname !== 'localhost') {
+// The app build carries its files inside the app already.
+if ('serviceWorker' in navigator && window.isSecureContext && location.hostname !== 'localhost' && !api.BYOS) {
   navigator.serviceWorker.register('sw.js').catch((e) => log(`service worker: ${e.message}`));
 }
 

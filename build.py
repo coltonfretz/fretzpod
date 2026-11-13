@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Builds Fretzpod for one site: python3 build.py [site_dir] [out_dir]
+   or the app build (BYOS):    python3 build.py --app [out_dir]
 
 Reads site_dir/site.json (default: site/) and writes out_dir (default: build/):
   html/          the app, ready to serve (from app/, minus vendor/ and guide/)
@@ -25,6 +26,12 @@ folder's guide-support.html (if there is one) replaces its generic support
 chapter: how to reach the person who runs this server is the site's own
 business and stays out of the repo.
 
+--app builds the copy the Android app carries inside it (android/build.sh):
+no site, no server. The person types their own Jellyfin's address at
+sign-in (api.js BYOS). Everything lands in one folder, out_dir/www/
+(default build-app/), served by the app at its root: the app files plus
+vendor/ and guide/. No nginx config and no helpers (Speakers, High Scores).
+
 site.json (see examples/site.json):
   serverName   "Sign in to <serverName>"
   purpleName   Settings > Body name for the purple body (default "Purple")
@@ -40,27 +47,35 @@ import shutil
 import sys
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
-SITE = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, "site")
-OUT = sys.argv[2] if len(sys.argv) > 2 else os.path.join(ROOT, "build")
 APP = os.path.join(ROOT, "app")
+APP_BUILD = len(sys.argv) > 1 and sys.argv[1] == "--app"
+if APP_BUILD:
+    SITE = None
+    OUT = sys.argv[2] if len(sys.argv) > 2 else os.path.join(ROOT, "build-app")
+else:
+    SITE = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, "site")
+    OUT = sys.argv[2] if len(sys.argv) > 2 else os.path.join(ROOT, "build")
 
 
 def fail(msg):
     sys.exit(f"build.py: {msg}")
 
 
-try:
-    with open(os.path.join(SITE, "site.json")) as f:
-        site = json.load(f)
-except FileNotFoundError:
-    fail(f"no {SITE}/site.json. Copy examples/site.json there and fill it in (README, Install).")
+if APP_BUILD:
+    site = {"jellyfin": {"default": "", "byHost": {}}}
+else:
+    try:
+        with open(os.path.join(SITE, "site.json")) as f:
+            site = json.load(f)
+    except FileNotFoundError:
+        fail(f"no {SITE}/site.json. Copy examples/site.json there and fill it in (README, Install).")
 
 jf = site.get("jellyfin") or {}
 default_jf = (jf.get("default") or "").rstrip("/")
 by_host = {h: u.rstrip("/") for h, u in (jf.get("byHost") or {}).items()}
-if not default_jf:
+if not default_jf and not APP_BUILD:
     fail('site.json needs jellyfin.default, the Jellyfin address the app uses (e.g. "https://jellyfin.example.com")')
-for url in [default_jf, *by_host.values()]:
+for url in [default_jf, *by_host.values()] if not APP_BUILD else []:
     if not re.fullmatch(r"https?://[^\s/\"';]+", url):
         fail(f"not a plain http(s)://host[:port] address: {url!r}")
 for host in by_host:
@@ -68,7 +83,10 @@ for host in by_host:
         fail(f"byHost keys are the app's host[:port] as typed in the browser, got {host!r}")
 
 shutil.rmtree(OUT, ignore_errors=True)
-html = os.path.join(OUT, "html")
+# The app build serves everything from one root; a site serves html/ at /
+# and vendor/, guide/ beside it (nginx).
+WEB = os.path.join(OUT, "www") if APP_BUILD else OUT
+html = WEB if APP_BUILD else os.path.join(OUT, "html")
 os.makedirs(html)
 
 # ---- app ----
@@ -76,17 +94,19 @@ for name in sorted(os.listdir(APP)):
     src = os.path.join(APP, name)
     if os.path.isfile(src):
         shutil.copy(src, html)
-shutil.copytree(os.path.join(APP, "vendor"), os.path.join(OUT, "vendor"))
+shutil.copytree(os.path.join(APP, "vendor"), os.path.join(WEB, "vendor"))
 # A folder of its own (served at /guide/), not part of the app's files: the
 # guide's pictures would crowd the app's ConfigMap toward its 1 MiB limit,
 # and the offline copy of the app (sw.js) has no need for them.
-shutil.copytree(os.path.join(APP, "guide"), os.path.join(OUT, "guide"))
+shutil.copytree(os.path.join(APP, "guide"), os.path.join(WEB, "guide"))
 
 config = {
     "serverName": site.get("serverName") or "Jellyfin",
     "purpleName": site.get("purpleName") or "Purple",
     "jellyfin": {"default": default_jf, "byHost": by_host},
 }
+if APP_BUILD:
+    config["byos"] = True
 with open(os.path.join(html, "config.js"), "w") as f:
     f.write("// Written by build.py from site/site.json. Edit that, not this.\n")
     f.write("export default " + json.dumps(config, indent=2) + ";\n")
@@ -94,10 +114,11 @@ with open(os.path.join(html, "config.js"), "w") as f:
 with open(os.path.join(APP, "api.js")) as f:
     version = re.search(r"^export const VERSION = '([^']*)'", f.read(), re.M).group(1)
 digest = hashlib.sha256()
-for name in sorted(os.listdir(html)):
+files = sorted(n for n in os.listdir(html) if os.path.isfile(os.path.join(html, n)))
+for name in files:
     with open(os.path.join(html, name), "rb") as f:
         digest.update(f.read())
-shell = ",".join(n for n in sorted(os.listdir(html)) if n != "sw.js")
+shell = ",".join(n for n in files if n != "sw.js")
 sw = os.path.join(html, "sw.js")
 with open(sw) as f:
     text = f.read()
@@ -106,17 +127,21 @@ with open(sw, "w") as f:
     f.write(text)
 
 # ---- the User Guide ----
-guide_page = os.path.join(OUT, "guide", "index.html")
+guide_page = os.path.join(WEB, "guide", "index.html")
 with open(guide_page) as f:
     page = f.read()
-support = os.path.join(SITE, "guide-support.html")
-if os.path.exists(support):
+support = os.path.join(SITE, "guide-support.html") if SITE else None
+if support and os.path.exists(support):
     with open(support) as f:
         page = re.sub(r"<!-- BEGIN SUPPORT -->.*?<!-- END SUPPORT -->", lambda m: f.read().strip(), page, flags=re.S)
 page = (page.replace("__SERVER__", config["serverName"]).replace("__PURPLE__", config["purpleName"])
             .replace("__VERSION__", version))
 with open(guide_page, "w") as f:
     f.write(page)
+
+if APP_BUILD:
+    print(f"built {WEB} (v{version}, app build: the person picks their server)")
+    sys.exit(0)
 
 # ---- nginx ----
 with open(os.path.join(APP, "tv-hosts.json")) as f:

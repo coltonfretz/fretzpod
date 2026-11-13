@@ -553,7 +553,13 @@ class QuickConnect {
       this.msg = 'In your Jellyfin app, open your profile, then Quick Connect, and enter:';
       ui.refresh(this);
       qc.done.catch(() => { this.code = null; this.msg = 'That code expired. Press MENU and try again.'; ui.refresh(this); });
-    }).catch((e) => { this.msg = `Couldn't reach Jellyfin: ${e.message}`; ui.refresh(this); });
+    }).catch((e) => {
+      // Jellyfin answers 401 when its admin has Quick Connect switched off.
+      this.msg = /^40[13]/.test(e.message)
+        ? `Quick Connect is off on ${api.SERVER_NAME}. Its admin can turn it on under Dashboard, General; or press MENU and sign in with your password.`
+        : `Couldn't reach ${api.SERVER_NAME}: ${e.message}`;
+      ui.refresh(this);
+    });
   }
   leave() { if (this.qc) this.qc.cancel(); }
   render(view) {
@@ -783,11 +789,12 @@ class TimePicker {
 // ---------- the screen stack ----------
 
 export class UI {
-  constructor(screenEl, { player, wheel, onPassword }) {
+  constructor(screenEl, { player, wheel, onPassword, onServer }) {
     this.root = screenEl;
     this.player = player;
     this.wheel = wheel;
     this.onPassword = onPassword;
+    this.onServer = onServer;
     this.stack = [];
     this.ticks = [];
     this.titleEl = screenEl.querySelector('.bar-title');
@@ -1067,12 +1074,30 @@ export class UI {
   // ---------- menus ----------
 
   signIn() {
-    return new List('Fretzpod', {
-      rows: [
-        { label: 'Sign in with Quick Connect', arrow: true, select: (ui) => ui.push(new QuickConnect()) },
-        { label: 'Sign in with password', arrow: true, select: () => this.onPassword() },
-      ],
-    });
+    // The app build asks for the person's own server first (api.js BYOS).
+    if (api.BYOS && !api.hasServer()) {
+      return new List('Fretzpod', {
+        rows: [{ label: 'Connect to your server', arrow: true, select: () => this.onServer() }],
+      });
+    }
+    const rows = [
+      { label: 'Sign in with Quick Connect', arrow: true, select: (ui) => ui.push(new QuickConnect()) },
+      { label: 'Sign in with password', arrow: true, select: () => this.onPassword() },
+    ];
+    if (api.BYOS) rows.push({ label: 'Server', value: () => api.SERVER_NAME, select: () => this.onServer() });
+    return new List('Fretzpod', { rows });
+  }
+
+  // Signed in, but the server isn't answering (main.js checks at startup,
+  // and again when the phone gets a connection back).
+  unreachable(retry) {
+    const rows = [
+      { label: `Can't reach ${api.SERVER_NAME}` },
+      { label: 'Try again', select: () => retry() },
+    ];
+    if (api.BYOS) rows.push({ label: 'Change server', arrow: true, select: () => this.onServer() });
+    rows.push({ label: 'Sign out', arrow: true, select: (ui) => ui.push(ui.confirmSignOut()) });
+    return new List(api.SERVER_NAME, { rows, start: 1 });
   }
 
   home() {
@@ -1342,7 +1367,8 @@ export class UI {
         { label: 'Star Pinball', arrow: true, select: (ui) => ui.push(ui.pinball()) },
         { label: 'Fishing Trip', arrow: true, select: (ui) => ui.push(ui.fishing()) },
         { label: 'Tiki Golf', arrow: true, select: (ui) => ui.push(ui.golf()) },
-        { label: 'High Scores', arrow: true, select: (ui) => ui.push(ui.highScores()) },
+        // The shared boards run beside a site's server (scores/); the app build has none.
+        ...(api.HELPERS ? [{ label: 'High Scores', arrow: true, select: (ui) => ui.push(ui.highScores()) }] : []),
         { label: 'Alarms', arrow: true, select: (ui) => ui.push(ui.alarmsMenu()) },
       ],
     });
@@ -1808,7 +1834,7 @@ export class UI {
       rows: [
         info('Fretzpod', api.VERSION),
         info('Signed in as', s ? s.name : '-'),
-        info('Server', api.AWAY ? 'Away' : 'Home'),
+        info('Server', api.BYOS ? api.SERVER_NAME : api.AWAY ? 'Away' : 'Home'),
         info('Playback', this.player.basic ? 'Basic' : streamType.mux ? 'Stream (MP4)' : 'Stream'),
         { label: 'Log', arrow: true, select: (ui) => ui.push(new List('Log', { rows: logLines().map((l) => ({ label: l })), empty: 'Empty' })) },
         // The User Guide (app/guide/, served at /guide/). A new tab or window:

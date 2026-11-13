@@ -39,7 +39,7 @@ const call = (path, body) => api.podCall('speakers', path, body);
 // service being down all land here). Works on both copies: the account is
 // the lock, not the address.
 export async function listSpeakers() {
-  if (!api.getSession()) return [];
+  if (!api.getSession() || !api.HELPERS) return [];
   try { return await call('list'); } catch { return []; }
 }
 

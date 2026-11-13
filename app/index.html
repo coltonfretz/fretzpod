@@ -49,12 +49,27 @@
 
 <div id="car" hidden></div>
 
-<div id="pw-overlay" hidden>
-  <form id="pw-form">
+<!-- The app build only: which Jellyfin to use (api.js findServer). -->
+<div id="srv-overlay" class="pw-overlay" hidden>
+  <form id="srv-form" class="pw-form">
+    <h2>Your Jellyfin server</h2>
+    <input id="srv-addr" inputmode="url" autocomplete="url" autocapitalize="off" spellcheck="false"
+           placeholder="jellyfin.example.com or 192.168.1.20:8096" required>
+    <p class="pw-hint">The address you use to open Jellyfin in a browser.</p>
+    <p id="srv-error" class="pw-error"></p>
+    <div class="pw-buttons">
+      <button type="button" id="srv-cancel">Cancel</button>
+      <button type="submit" id="srv-go">Connect</button>
+    </div>
+  </form>
+</div>
+
+<div id="pw-overlay" class="pw-overlay" hidden>
+  <form id="pw-form" class="pw-form">
     <h2>Sign in to <span id="server-name">Jellyfin</span></h2>
     <input id="pw-user" autocomplete="username" placeholder="Username" required>
     <input id="pw-pass" type="password" autocomplete="current-password" placeholder="Password">
-    <p id="pw-error"></p>
+    <p id="pw-error" class="pw-error"></p>
     <div class="pw-buttons">
       <button type="button" id="pw-cancel">Cancel</button>
       <button type="submit">Sign in</button>

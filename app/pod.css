@@ -370,25 +370,26 @@ body.cf-on #pod { display: none; }
 .cf-track.on .n, .cf-track.on .t { color: #dde9ff; }
 .cf-loading { padding: 4vh; text-align: center; color: #55575c; font-size: 3.8vh; }
 
-/* ---------- password sign-in ---------- */
-#pw-overlay {
+/* ---------- password sign-in, and the app build's server form ---------- */
+.pw-overlay {
   position: fixed; inset: 0; z-index: 10;
   display: grid; place-items: center;
   background: rgba(0, 0, 0, .55);
   padding: 16px;
 }
-#pw-overlay[hidden] { display: none; }
-#pw-form {
+.pw-overlay[hidden] { display: none; }
+.pw-form {
   width: min(100%, 360px);
   background: #fff; color: #111; border-radius: 14px; padding: 20px;
   user-select: text; -webkit-user-select: text;
 }
-#pw-form h2 { margin: 0 0 12px; font-size: 18px; }
-#pw-form input {
+.pw-form h2 { margin: 0 0 12px; font-size: 18px; }
+.pw-form input {
   display: block; width: 100%; margin: 8px 0; padding: 12px;
   font-size: 16px; border: 1px solid #b8bbc0; border-radius: 8px;
 }
-#pw-error { min-height: 1.2em; margin: 4px 0; color: #c0392b; font-size: 14px; }
+.pw-hint { margin: 0 0 4px; color: #55575c; font-size: 13px; }
+.pw-error { min-height: 1.2em; margin: 4px 0; color: #c0392b; font-size: 14px; }
 .pw-buttons { display: flex; gap: 8px; justify-content: flex-end; }
 .pw-buttons button {
   font-size: 16px; padding: 10px 16px; border-radius: 8px;

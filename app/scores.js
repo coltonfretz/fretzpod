@@ -54,7 +54,7 @@ const pending = () => readJson(PENDING, {});
 // ({top, you: {rank, score}, players, newBest}), or null if it couldn't be
 // sent (it's kept for later).
 export async function submit(game, score) {
-  if (!api.getSession() || !(score > 0)) return null;
+  if (!api.getSession() || !api.HELPERS || !(score > 0)) return null;
   const p = pending();
   p[game] = Math.max(p[game] || 0, score);
   store.set(PENDING, JSON.stringify(p));

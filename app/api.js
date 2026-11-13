@@ -6,20 +6,33 @@ import site from './config.js';
 
 export const VERSION = '0.27.0';
 
-// Which Jellyfin this copy talks to comes from the site settings
-// (config.js, written by build.py from site/site.json): by the address the
-// app was opened at, else the default. WHY per address: an https page can't
-// call plain http (mixed content), so an https copy reached from outside
-// needs Jellyfin's https address, while a home copy on plain http can use the
-// LAN one. nginx's Content Security Policy allows each copy only the one it uses.
+// Which Jellyfin this copy talks to. A site build (build.py with a
+// site.json) knows its server: by the address the app was opened at, else
+// the default. WHY per address: an https page can't call plain http (mixed
+// content), so an https copy reached from outside needs Jellyfin's https
+// address, while a home copy on plain http can use the LAN one. nginx's
+// Content Security Policy allows each copy only the one it uses.
 // On localhost (dev/devserver.py) Jellyfin is reached through the dev
 // server's /jf pass-through instead.
+//
+// The app build (BYOS, "bring your own server": the Android app) knows no
+// server. The person types theirs at sign-in (findServer below) and it's
+// kept on the phone; JF is '' until then.
+export const BYOS = !!site.byos;
 const DEV = location.hostname === 'localhost';
-export const JF = DEV ? location.origin + '/jf'
+const savedServer = () => { try { return JSON.parse(store.get('fp.server', 'null')); } catch { return null; } };
+// let, not const: the sign-in screen sets it, and every module reading
+// api.JF sees the change (ES module exports are live).
+export let JF = BYOS ? (savedServer()?.url || '')
+  : DEV ? location.origin + '/jf'
   : site.jellyfin.byHost[location.host] || site.jellyfin.default;
-// Opened over https = probably away from home: Data saver by default.
-export const AWAY = location.protocol === 'https:';
-export const SERVER_NAME = site.serverName;
+export let SERVER_NAME = BYOS ? (savedServer()?.name || 'Jellyfin') : site.serverName;
+// Away from home: Data saver by default. The app build can't tell, so it
+// assumes away (mobile data is the costly mistake).
+export const AWAY = BYOS || location.protocol === 'https:';
+// Fretzpod's own helpers (Speakers, High Scores) run beside a site's
+// server; the app build has none.
+export const HELPERS = !BYOS;
 
 // Same storage keys as the phase 0 test page, so a sign-in there carries over.
 function deviceId() {
@@ -72,6 +85,7 @@ const post = (path, body) => request(path, { method: 'POST', body: JSON.stringif
 // Authorization header so each service can ask Jellyfin who's calling.
 // Errors carry .status (scores.js tells "name taken" from "offline").
 export async function podCall(base, path, body) {
+  if (!HELPERS) { const e = new Error(`no ${base} here`); e.status = 404; throw e; }
   const res = await fetch(`/${base}/api/${path}`, {
     method: body ? 'POST' : 'GET',
     headers: { Authorization: authHeader(), ...(body ? { 'Content-Type': 'application/json' } : {}) },
@@ -83,6 +97,66 @@ export async function podCall(base, path, body) {
     throw e;
   }
   return res.json();
+}
+
+// ---------- which server (app build) ----------
+
+// What the person typed, as the addresses worth trying, most likely first:
+// "music.example.com" might be https, or plain http on Jellyfin's own port.
+function candidates(typed) {
+  let t = typed.trim().replace(/\/+$/, '');
+  if (!t) return [];
+  if (/^https?:\/\//i.test(t)) return [t];
+  const hasPort = /:\d+(\/|$)/.test(t);
+  const out = [`https://${t}`, `http://${t}`];
+  if (!hasPort) out.push(`http://${t}:8096`, `https://${t}:8920`);
+  return out;
+}
+
+async function probe(url) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 6000);
+  try {
+    const res = await fetch(url + '/System/Info/Public', { signal: ctrl.signal });
+    if (!res.ok) return null;
+    const info = await res.json();
+    // Anything can answer 200; Jellyfin's answer names its product and id.
+    if (!info?.Id || (info.ProductName && !/jellyfin/i.test(info.ProductName))) return null;
+    return { url, name: info.ServerName || 'Jellyfin', id: info.Id };
+  } catch { return null; } finally { clearTimeout(timer); }
+}
+
+// Finds the Jellyfin at a typed address, or throws a message to show.
+export async function findServer(typed) {
+  const list = candidates(typed);
+  if (!list.length) throw new Error('Type your server\'s address.');
+  for (const url of list) {
+    const found = await probe(url);
+    if (found) return found;
+  }
+  throw new Error(`No Jellyfin answered at ${typed.trim()}. Check the address, and that the phone can reach it.`);
+}
+
+// Switches to a server found above. A sign-in belongs to one server, so
+// switching signs out of the old one.
+export function useServer(found) {
+  if (session && JF !== found.url) clearSession();
+  JF = found.url;
+  SERVER_NAME = found.name;
+  store.set('fp.server', JSON.stringify(found));
+  log(`server set (${new URL(found.url).protocol.replace(':', '')})`);
+  window.dispatchEvent(new Event('fp-server'));
+}
+
+export const hasServer = () => !!JF;
+
+// Is Jellyfin there? For the "can't reach" screen at startup.
+export async function reachable() {
+  if (!JF) return false;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 8000);
+  try { return (await fetch(JF + '/System/Info/Public', { signal: ctrl.signal })).ok; }
+  catch { return false; } finally { clearTimeout(timer); }
 }
 
 // ---------- sign in / out ----------
