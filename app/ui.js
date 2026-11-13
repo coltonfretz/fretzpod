@@ -70,7 +70,17 @@ class List {
       this.error = e.message;
       log(`loading a list failed: ${e.message}`);
       this.ui.refresh(this);
+      // main.js checks whether the server is there at all.
+      window.dispatchEvent(new Event('fp-loadfail'));
     });
+  }
+
+  // The server is back: load again what failed.
+  retry() {
+    if (!this.error || !this.fetchPage) return;
+    this.error = null;
+    if (this.total === null) this.need(0);
+    this.ui.refresh(this);
   }
 
   turn(dir, step) { return this.moveTo(this.sel + dir * step); }
@@ -1088,8 +1098,8 @@ export class UI {
     return new List('Fretzpod', { rows });
   }
 
-  // Signed in, but the server isn't answering (main.js checks at startup,
-  // and again when the phone gets a connection back).
+  // Signed in, but the server isn't answering (main.js checkServer). Opens
+  // over whatever was showing; closes itself once the server answers.
   unreachable(retry) {
     const rows = [
       { label: `Can't reach ${api.SERVER_NAME}` },

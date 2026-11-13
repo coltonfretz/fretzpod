@@ -134,26 +134,42 @@ window.addEventListener('fp-server', () => {
 });
 
 // Signed in but the server doesn't answer (down, or the phone is offline):
-// say so, instead of menus that each fail on their own. Only replaces the
-// home menu if nobody has moved on from it yet; tries again by itself when
-// the phone's connection comes back.
+// say so, over whatever was showing, instead of menus that each fail on
+// their own. Checked at startup, on coming back to the app (a phone keeps
+// it running for days), when the phone goes offline, and when a menu fails
+// to load. Closes itself, and reloads what failed, once the server answers.
 let downScreen = null;
-async function checkServer(shown) {
-  if (await api.reachable()) {
-    if (downScreen && ui.top === downScreen) { downScreen = null; ui.reset(ui.home()); }
+let checking = false;
+async function checkServer(pressed = false) {
+  if (checking || !api.getSession()) return;
+  checking = true;
+  const up = await api.reachable();
+  checking = false;
+  if (up) {
+    if (downScreen && ui.top === downScreen) {
+      downScreen = null;
+      ui.leaveTop();
+      ui.top?.retry?.();
+    }
     return;
   }
-  if (!api.getSession() || (ui.top !== shown && ui.top !== downScreen)) return;
+  if (!api.getSession()) return;
+  if (downScreen && ui.stack.includes(downScreen)) {
+    if (pressed) ui.toast(`Still can't reach ${api.SERVER_NAME}`);
+    return;
+  }
   log("server didn't answer");
-  downScreen = ui.unreachable(() => checkServer(downScreen));
-  ui.reset(downScreen);
+  downScreen = ui.unreachable(() => checkServer(true));
+  ui.push(downScreen);
 }
-window.addEventListener('online', () => { if (downScreen && ui.top === downScreen) checkServer(downScreen); });
+window.addEventListener('online', checkServer);
+window.addEventListener('offline', checkServer);
+window.addEventListener('fp-loadfail', checkServer);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) checkServer(); });
 
 if (api.getSession()) {
-  const first = ui.home();
-  ui.reset(first);
-  checkServer(first);
+  ui.reset(ui.home());
+  checkServer();
 } else {
   ui.reset(ui.signIn());
 }
