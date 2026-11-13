@@ -1854,6 +1854,8 @@ export class UI {
         // The User Guide (app/guide/, served at /guide/). A new tab or window:
         // leaving this page would stop the music.
         { label: 'User Guide', arrow: '\u2197\uFE0E', select: () => window.open('guide/', '_blank', 'noopener') },
+        // Google Play wants the policy reachable from inside the app too.
+        { label: 'Privacy Policy', arrow: '\u2197\uFE0E', select: () => window.open('https://coltonfretz.github.io/fretzpod/privacy.html', '_blank', 'noopener') },
       ],
     });
   }

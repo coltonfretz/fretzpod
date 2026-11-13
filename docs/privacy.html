@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fretzpod Privacy Policy</title>
+<style>
+  :root { --bg: #fff; --fg: #1a1a1a; --muted: #5b5f66; --rule: #e3e5e8; --link: #1d6cd0; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #121314; --fg: #e8e9eb; --muted: #a2a6ad; --rule: #2c2e31; --link: #6aa6ff; }
+  }
+  body { margin: 0; background: var(--bg); color: var(--fg);
+         font: 17px/1.6 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  main { max-width: 680px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 28px; margin: 0 0 4px; }
+  h2 { font-size: 19px; margin: 32px 0 8px; padding-top: 16px; border-top: 1px solid var(--rule); }
+  .date { color: var(--muted); margin: 0 0 24px; }
+  a { color: var(--link); }
+  li { margin: 4px 0; }
+</style>
+</head>
+<body>
+<main>
+<h1>Fretzpod Privacy Policy</h1>
+<p class="date">Effective November 13, 2026</p>
+
+<p><strong>The short version:</strong> Fretzpod collects nothing. It has no accounts of its own, no analytics, no ads and no tracking. It talks to the Jellyfin server you connect it to and to nothing run by the developer.</p>
+
+<h2>What Fretzpod is</h2>
+<p>Fretzpod is a music player for your own <a href="https://jellyfin.org">Jellyfin</a> media server, modeled on the iPod classic. You bring the server; Fretzpod plays the music on it.</p>
+
+<h2>Where your data goes</h2>
+<ul>
+  <li><strong>Your Jellyfin server, and only it.</strong> When you connect, Fretzpod sends your sign-in (a Quick Connect code or your username and password) to the server address you typed, and from then on asks that server for your music library, album art, lyrics and the songs you play. That server is run by you or by whoever gave you an account on it, and its own privacy practices apply to what it keeps.</li>
+  <li><strong>Like any Jellyfin app,</strong> Fretzpod tells your server its name ("Fretzpod"), the kind of device ("Android") and a random device ID, so you can see and revoke the sign-in under your server's Dashboard &rarr; Devices. Fretzpod does not report what you play to your server's activity log or play counts.</li>
+  <li><strong>Live TV (only if your server offers it).</strong> If your Jellyfin server runs a plugin that provides free internet TV channels, those channels stream from the channels' own providers, which see the request the way any website does.</li>
+  <li><strong>Nothing to the developer.</strong> The developer of Fretzpod runs no servers for the app and receives no data from it.</li>
+</ul>
+
+<h2>What stays on your phone</h2>
+<p>Fretzpod keeps these on your phone only, in the app's own storage:</p>
+<ul>
+  <li>your server's address and name, and the sign-in token your server issued;</li>
+  <li>your settings (look, sound, alarms) and your game progress and best scores;</li>
+  <li>a short troubleshooting log you can read under Settings &rarr; About &rarr; Log. It records what the app did (for example "server didn't answer"), not your server's address or what you listened to.</li>
+</ul>
+<p>Signing out removes the sign-in token and the log. Uninstalling the app removes all of it.</p>
+
+<h2>Permissions</h2>
+<ul>
+  <li><strong>Internet and network state:</strong> to reach your Jellyfin server and to notice when the connection comes back.</li>
+  <li><strong>Foreground service, wake lock:</strong> so music keeps playing with the screen off, with controls on the lock screen and in notifications.</li>
+  <li><strong>Vibrate:</strong> for the click wheel's haptic feedback.</li>
+</ul>
+
+<h2>Children</h2>
+<p>Fretzpod is not directed at children and collects no information from anyone, including children.</p>
+
+<h2>Changes</h2>
+<p>If this policy changes, the new version will be posted here with a new effective date.</p>
+
+<h2>Contact</h2>
+<p>Questions about this policy: open an issue at <a href="https://github.com/coltonfretz/fretzpod/issues">github.com/coltonfretz/fretzpod/issues</a>.</p>
+</main>
+</body>
+</html>
