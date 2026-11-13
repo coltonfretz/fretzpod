@@ -154,7 +154,7 @@ export const hasServer = () => !!JF;
 export async function reachable() {
   if (!JF) return false;
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 8000);
+  const timer = setTimeout(() => ctrl.abort(), 5000);
   try { return (await fetch(JF + '/System/Info/Public', { signal: ctrl.signal })).ok; }
   catch { return false; } finally { clearTimeout(timer); }
 }

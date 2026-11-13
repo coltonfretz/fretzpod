@@ -1107,7 +1107,11 @@ export class UI {
     ];
     if (api.BYOS) rows.push({ label: 'Change server', arrow: true, select: () => this.onServer() });
     rows.push({ label: 'Sign out', arrow: true, select: (ui) => ui.push(ui.confirmSignOut()) });
-    return new List(api.SERVER_NAME, { rows, start: 1 });
+    const screen = new List(api.SERVER_NAME, { rows, start: 1 });
+    // MENU stays put: behind it is only menus that can't load. It closes
+    // itself when the server answers (main.js).
+    screen.back = () => true;
+    return screen;
   }
 
   home() {
