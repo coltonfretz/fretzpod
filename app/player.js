@@ -88,6 +88,7 @@ export class Player extends Emitter {
       this.start(this.index, this.position());
     });
     this.setupMediaSession();
+    this.setupNative();
   }
 
   fresh() {
@@ -479,6 +480,7 @@ export class Player extends Emitter {
         });
       } catch { /* rejected mid-change */ }
     }
+    if (this.ticks % 10 === 0) this.tellNative();
     this.pump();
     this.emit('tick');
   }
@@ -514,5 +516,45 @@ export class Player extends Emitter {
     for (const [action, fn] of Object.entries(handlers)) {
       try { navigator.mediaSession.setActionHandler(action, fn); } catch { /* unsupported */ }
     }
+  }
+
+  // ---------- the Android app ----------
+  //
+  // The Android app's WebView gives the page's mediaSession to no one: no
+  // lock screen, no notification, and Bluetooth/headset buttons do nothing.
+  // So the app runs its own media session, fed from here, and calls back
+  // window.fretzpodMedia(action, arg) when a button is pressed.
+
+  setupNative() {
+    if (!window.FretzpodAndroid?.media) return;
+    const handlers = {
+      play: () => this.el.play(),
+      pause: () => this.el.pause(),
+      nexttrack: () => this.next(),
+      previoustrack: () => this.prev(),
+      seekto: (sec) => this.seek(sec),
+      stop: () => this.stop(),
+    };
+    window.fretzpodMedia = (action, arg) => { handlers[action]?.(arg); };
+    this.on((what) => { if (what === 'song' || what === 'state') this.tellNative(); });
+    // A seek or a restart partway in moves the lock screen's progress bar.
+    for (const e of ['seeked', 'playing']) this.el.addEventListener(e, () => this.tellNative());
+  }
+
+  tellNative() {
+    const native = window.FretzpodAndroid;
+    if (!native?.media) return;
+    const item = this.current;
+    try {
+      native.media(JSON.stringify(!item ? { state: 'none' } : {
+        state: this.paused ? 'paused' : 'playing',
+        title: item.Name,
+        artist: api.artistOf(item),
+        album: item.Album || '',
+        art: api.artUrl(item, 512),
+        duration: this.duration() || 0,
+        position: this.position() || 0,
+      }));
+    } catch { /* app too old for this */ }
   }
 }
