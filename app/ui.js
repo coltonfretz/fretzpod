@@ -1120,7 +1120,6 @@ export class UI {
     // Same order as the iPod Classic's main menu.
     const rows = [
       { label: 'Music', arrow: true, select: (ui) => ui.push(ui.music()) },
-      { label: 'TV', arrow: true, select: (ui) => ui.push(ui.tv()) },
       { label: 'Extras', arrow: true, select: (ui) => ui.push(ui.extras()) },
       { label: 'Settings', arrow: true, select: (ui) => ui.push(ui.settings()) },
       { label: 'Shuffle Songs', select: (ui) => ui.shuffleSongs() },
@@ -1131,13 +1130,15 @@ export class UI {
     const list = this.homeList = new List('Fretzpod', { rows, split: true });
     // Speakers only shows up for accounts fretzpod-speakers allows (and only
     // if that optional service runs); speakers.js. Added when the answer comes back.
-    // TV needs the Tuner plugin on the Jellyfin server. Its row comes out
-    // only on a 404 (plugin not installed), not on a passing hiccup.
-    api.request('/Tuner/tv').catch((e) => {
-      if (!/^404 /.test(e.message)) return;
-      rows.splice(rows.findIndex((r) => r.label === 'TV'), 1);
+    // TV needs the Tuner plugin on the Jellyfin server, so its row only
+    // goes in once the server says the plugin is there. Waiting for a yes,
+    // not a 404: some servers' "not found" reaches a web page as a bare
+    // network error (no CORS header on it), the Jellyfin demo's for one.
+    api.request('/Tuner/tv').then((d) => {
+      if (!d?.enabled || rows.some((r) => r.label === 'TV')) return;
+      rows.splice(1, 0, { label: 'TV', arrow: true, select: (ui) => ui.push(ui.tv()) });
       if (this.top === list) this.render();
-    });
+    }).catch(() => {});
     listSpeakers().then((sps) => {
       if (!sps.length) return;
       rows.splice(rows.findIndex((r) => r.label === 'Settings'), 0,
