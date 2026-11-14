@@ -9,8 +9,9 @@
 // - Holding MENU about a second opens the pause menu: Resume, or quit.
 // - In the pause menu, the wheel picks, center chooses, a MENU tap resumes.
 // - End screens (Game Over, the scorecard) still leave on a MENU tap.
-// Play/pause also opens it in Star Pinball and Tiki Golf. Fishing Trip leaves
-// play/pause alone, because the reel spins right past it.
+// Play/pause also opens it in Tiki Golf. Fishing Trip and Star Pinball leave
+// play/pause alone mid-game: the reel spins right past it, and a thumb sliding
+// off a flipper hits it (pinball counts a touch the moment it lands).
 //
 // Times here are wall-clock (performance.now), not game time: a paused game's
 // clock stops, and the hint has to fade either way.

@@ -38,6 +38,9 @@ site.json (see examples/site.json):
   jellyfin     {"default": URL, "byHost": {"host[:port]": URL}}
   helpers      optional {"resolver": DNS IP, "speakers": URL, "scores": URL}
   namespace    Kubernetes only, used by deploy.sh
+  prizesOpenFor optional [{"server": https URL, "user": Jellyfin username}]
+               accounts that get every prize body open (bodies.js). --app also reads this one key from
+               site/site.json if it's there, so the owner's app has them too.
 """
 import hashlib
 import json
@@ -63,6 +66,11 @@ def fail(msg):
 
 if APP_BUILD:
     site = {"jellyfin": {"default": "", "byHost": {}}}
+    try:
+        with open(os.path.join(ROOT, "site", "site.json")) as f:
+            site["prizesOpenFor"] = json.load(f).get("prizesOpenFor") or []
+    except FileNotFoundError:
+        pass
 else:
     try:
         with open(os.path.join(SITE, "site.json")) as f:
@@ -105,6 +113,8 @@ config = {
     "purpleName": site.get("purpleName") or "Purple",
     "jellyfin": {"default": default_jf, "byHost": by_host},
 }
+if site.get("prizesOpenFor"):
+    config["prizesOpenFor"] = list(site["prizesOpenFor"])
 if APP_BUILD:
     config["byos"] = True
 with open(os.path.join(html, "config.js"), "w") as f:

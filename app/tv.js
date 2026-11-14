@@ -12,6 +12,9 @@
 // Wheel: turning surfs (the tune waits for the wheel to settle, so a fast
 // spin skips past channels instead of starting each one), next/previous step
 // one channel, center shows now/next, play/pause pauses, MENU goes back.
+// The browser's media panel (pulled down from the top in Chrome) does the
+// same while TV is open: play/pause the picture, previous/next surf (it
+// used to drive the paused music instead, so it seemed to do nothing).
 // Volume is the phone's own keys. Turn the phone sideways for full screen;
 // a swipe there surfs.
 import * as api from './api.js';
@@ -179,6 +182,7 @@ export class Tv {
     this.tuned = i;
     store.set('fp.tvlast', String(ch.number));
     this.pauseMusic();
+    this.claimMedia();
     if (!viaRelay && relayed().has(String(ch.number))) viaRelay = true;
     this.teardown();
     const src = viaRelay ? `${api.JF}/${ch.relay}&t=${encodeURIComponent(tvData.ticket)}` : ch.url;
@@ -257,6 +261,50 @@ export class Tv {
     if (!p.speaker && p.playing && !p.paused) p.toggle();
   }
 
+  // ---------- the browser's media panel ----------
+
+  claimMedia() {
+    const ms = 'mediaSession' in navigator ? navigator.mediaSession : null;
+    if (!ms) return;
+    if (!this.mediaClaimed) {
+      this.mediaClaimed = true;
+      this.player.lendMediaSession();
+      const v = () => this.parts?.video;
+      const handlers = {
+        play: () => v()?.play().catch(() => {}),
+        pause: () => v()?.pause(),
+        nexttrack: () => this.surf(1),
+        previoustrack: () => this.surf(-1),
+        seekto: null,             // live: nothing to seek
+        stop: () => v()?.pause(),
+      };
+      for (const [action, fn] of Object.entries(handlers)) {
+        try { ms.setActionHandler(action, fn); } catch { /* unsupported */ }
+      }
+      try { ms.setPositionState(); } catch { /* not supported */ }   // no song progress bar
+    }
+    this.mediaInfo();
+  }
+
+  // What the panel shows: the channel, and what's on.
+  mediaInfo() {
+    const ch = this.ch;
+    if (!this.mediaClaimed || !ch || typeof MediaMetadata === 'undefined') return;
+    const logo = tvData.logo(ch);
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: `${ch.number}  ${ch.name}`,
+      artist: tvData.now(ch),
+      album: 'TV',
+      artwork: logo ? [{ src: logo }] : [],
+    });
+  }
+
+  releaseMedia() {
+    if (!this.mediaClaimed) return;
+    this.mediaClaimed = false;
+    this.player.takeBackMediaSession();
+  }
+
   // ---------- overlays ----------
 
   showBanner(fill = true) {
@@ -268,6 +316,7 @@ export class Tv {
     const src = tvData.logo(ch);
     logo.hidden = !src;
     if (src && logo.getAttribute('src') !== src) logo.src = src;
+    this.mediaInfo();
     banner.classList.add('on');
     clearTimeout(this.bannerTimer);
     this.bannerTimer = setTimeout(() => banner.classList.remove('on'), BANNER_MS);
@@ -314,6 +363,7 @@ export class Tv {
     this.tuneTimer = null;
     this.setFull(false);
     this.teardown();
+    this.releaseMedia();
     this.tuned = -1;
     window.dispatchEvent(new Event('fp-orient'));
   }

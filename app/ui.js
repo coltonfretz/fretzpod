@@ -147,7 +147,14 @@ class List {
   }
 
   render(view) {
-    view.replaceChildren();
+    // The main menu's art pane stays put while the list redraws. WHY: taking
+    // it out and putting it back on every wheel tick restarts its drift
+    // animation and cuts its crossfade short, so scrolling hard made the
+    // cover jump and tear mid-frame on phones.
+    const pane = this.split ? this.ui.artPane : null;
+    for (const c of [...view.children]) if (c !== pane) c.remove();
+    if (pane && pane.parentNode !== view) view.append(pane);
+    const add = (node) => view.insertBefore(node, pane);   // before the pane, or last
     view.classList.toggle('split', this.split);
     const list = el('div', 'list');
     if (this.visible !== ROWS) list.style.gridTemplateRows = `repeat(${this.visible}, 1fr)`;
@@ -171,16 +178,15 @@ class List {
       if (r?.arrow) row.append(el('span', 'arrow', r.arrow === true ? '›' : r.arrow));
       list.append(row);
     }
-    view.append(list);
+    add(list);
     if (this.length > this.visible) {
       const bar = el('div', 'scroll');
       const thumb = el('div', 'thumb');
       thumb.style.height = `${Math.max(8, (this.visible / this.length) * 100)}%`;
       thumb.style.top = `${(this.top / this.length) * 100}%`;
       bar.append(thumb);
-      view.append(bar);
+      add(bar);
     }
-    if (this.split) view.append(this.ui.artPane);
   }
 }
 

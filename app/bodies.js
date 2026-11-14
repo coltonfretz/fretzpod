@@ -14,7 +14,20 @@
 // Locked bodies don't appear in Settings > Body (settings.js asks bodyOpen).
 // Each game's title menu has a Gold Body row showing how far along you are;
 // once it's open, picking the row puts it on.
+//
+// Showcase accounts: site.json's prizesOpenFor lists accounts that have
+// every prize body open whatever the totals say, so the owner can show them
+// off on a fresh install (the totals stay on one phone). Each is
+// {server, user}: the Jellyfin username, and the https address of the
+// server it must be signed in to. WHY the server too: in the app build
+// anyone can point the app at their own Jellyfin and make a user with that
+// name; only the https address is trusted, since a look-alike server can't
+// get a certificate for it. A site build talks only to its own servers
+// (site.json), so there the name is enough. Kept in the untracked
+// site.json, never in the repo; build.py copies it into both builds.
 import { store, el } from './util.js';
+import { getSession, JF, BYOS } from './api.js';
+import site from './config.js';
 import { pinballSave } from './pinball.js';
 import { golfSave, SHOP } from './golf.js';
 import { fishSave } from './fishing.js';
@@ -31,8 +44,17 @@ export const GOLD = [
 ];
 const goldFor = (game) => GOLD.find((b) => b.game === game);
 
+const bare = (url) => (url || '').trim().toLowerCase().replace(/\/+$/, '');
+const showcase = () => {
+  const name = (getSession()?.name || '').toLowerCase();
+  if (!name) return false;
+  return (site.prizesOpenFor || []).some((a) => (a.user || '').toLowerCase() === name
+    && (!BYOS || (bare(JF).startsWith('https://') && bare(JF) === bare(a.server))));
+};
+
 // Is this body open? The usual colors always are.
 export function bodyOpen(id) {
+  if (showcase()) return true;
   const gold = GOLD.find((b) => b.id === id);
   if (gold) return gold.have() >= gold.need;
   if (id === 'clear') return GOLD.every((b) => b.have() >= b.need);

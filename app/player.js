@@ -473,7 +473,7 @@ export class Player extends Emitter {
     this.notice();
     this.ticks++;
     if (this.ticks % 300 === 0 && screenOffNote()) log(`still playing${screenOffNote()}`);
-    if ('mediaSession' in navigator && this.playing && this.duration() > 0) {
+    if ('mediaSession' in navigator && !this.mediaLent && this.playing && this.duration() > 0) {
       try {
         navigator.mediaSession.setPositionState({
           duration: this.duration(), position: Math.min(this.position(), this.duration()), playbackRate: 1,
@@ -494,13 +494,25 @@ export class Player extends Emitter {
 
   showMetadata() {
     const item = this.current;
-    if (!item || !('mediaSession' in navigator) || typeof MediaMetadata === 'undefined') return;
+    if (this.mediaLent || !item || !('mediaSession' in navigator) || typeof MediaMetadata === 'undefined') return;
     navigator.mediaSession.metadata = new MediaMetadata({
       title: item.Name,
       artist: api.artistOf(item),
       album: item.Album || '',
       artwork: [{ src: api.artUrl(item, 512), sizes: '512x512', type: 'image/jpeg' }],
     });
+  }
+
+  // TV borrows the browser's media controls (the notification and lock
+  // screen panel) while it's open, so its buttons work the picture instead
+  // of the paused music (tv.js claimMedia). Lent, the player leaves the panel
+  // alone; given back, it puts its own buttons and song back.
+  lendMediaSession() { this.mediaLent = true; }
+  takeBackMediaSession() {
+    this.mediaLent = false;
+    this.setupMediaSession();
+    if (this.current) this.showMetadata();
+    else if ('mediaSession' in navigator) navigator.mediaSession.metadata = null;
   }
 
   setupMediaSession() {

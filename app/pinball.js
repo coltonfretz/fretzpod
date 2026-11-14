@@ -8,9 +8,11 @@
 // two thumbs. That needs the wheel's raw mode (rawButtons below, wheel.js),
 // because a normal press only counts when the thumb lifts. Hold center to
 // pull the plunger back, let go to launch: the longer the pull, the harder
-// the shot. Play/pause, or MENU held, opens the pause menu (pause.js, the
-// same in all three games); a MENU tap mid-game only says to hold it
-// (a thumb slipping up off a flipper quit the game).
+// the shot. MENU held opens the pause menu (pause.js, the same in all
+// three games); a MENU tap mid-game only says to hold it (a thumb slipping
+// up off a flipper quit the game). Play/pause does nothing mid-game: in raw
+// mode it counts the moment it's touched, and a thumb sliding down off a
+// flipper while juggling multiball kept pausing the game. Paused, it resumes.
 // While paused the wheel works normally (not raw), so it can pick Resume or
 // Quit game.
 //
@@ -474,8 +476,9 @@ export class StarPinball {
     if (i >= 0) this.flips[i].held = false;
   }
 
+  // Claimed so it doesn't pause the music either. Only resumes (see the top).
   play() {
-    if (this.state === 'play') this.openPause(); else if (this.state === 'paused') this.resume();
+    if (this.state === 'paused') this.resume();
     return true;
   }
 
