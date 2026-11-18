@@ -22,6 +22,31 @@ export function el(tag, cls, text) {
   return e;
 }
 
+// The iPod's repeat arrows for the top bar (ui.js and carmode.js). Hidden
+// unless set; setRepeatIcon shows it, with a small 1 for Repeat One.
+// WHY an SVG and not a text arrow (↻): phones draw those as color emoji or in
+// a different weight, and it has to sit next to ▶ at the same size.
+const SVG = 'http://www.w3.org/2000/svg';
+export function repeatIcon(cls) {
+  const s = document.createElementNS(SVG, 'svg');
+  s.setAttribute('class', cls);
+  s.setAttribute('viewBox', '0 0 24 24');
+  s.setAttribute('aria-hidden', 'true');
+  for (const d of ['M17 2l4 4-4 4', 'M3 11V9a3 3 0 0 1 3-3h15', 'M7 22l-4-4 4-4', 'M21 13v2a3 3 0 0 1-3 3H3', 'M11 10h1v4']) {
+    const p = document.createElementNS(SVG, 'path');
+    p.setAttribute('d', d);
+    s.append(p);
+  }
+  s.lastChild.setAttribute('class', 'one');
+  return s;
+}
+
+// mode: 'off' | 'one' | 'all'.
+export function setRepeatIcon(svg, mode) {
+  svg.classList.toggle('on', mode !== 'off');
+  svg.classList.toggle('is-one', mode === 'one');
+}
+
 export function fmt(s) {
   if (!isFinite(s) || s < 0) s = 0;
   s = Math.floor(s);

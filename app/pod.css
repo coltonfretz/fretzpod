@@ -815,3 +815,14 @@ body.asleep #wheel { opacity: .28; transition: opacity 1.2s; }
   font-size: 15cqh; font-weight: 700; padding: 1cqh 4cqw; border-radius: 1.6cqh;
   background: var(--sel); color: #fff;
 }
+
+/* Repeat icon beside ▶ in the top bars (util.js repeatIcon): shows while
+   Repeat is on, from Settings or an album's hold menu; the small 1 only for
+   Repeat One. Same blue as the play state, dark screen included. */
+.bar-state { display: inline-flex; align-items: center; gap: 1.2cqw; }
+.bar-repeat { display: none; height: 4.4cqh; width: auto; aspect-ratio: 1; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.bar-repeat.on { display: block; }
+.bar-repeat .one { display: none; }
+.bar-repeat.is-one .one { display: inline; }
+.car-bar-state { display: inline-flex; align-items: center; gap: 1.2cqw; }
+.car-bar-state .bar-repeat { height: min(6cqh, 4.6cqw); }

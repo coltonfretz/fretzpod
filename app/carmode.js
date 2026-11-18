@@ -19,8 +19,8 @@
 // (Wake Lock; Chrome only allows it on https, so the home copy relies on the
 // phone's own timeout).
 import * as api from './api.js';
-import { settings } from './settings.js';
-import { el, fmt, log, store, prettyGenre } from './util.js';
+import { settings, repeatMode } from './settings.js';
+import { el, fmt, log, store, prettyGenre, repeatIcon, setRepeatIcon } from './util.js';
 
 const KEY = 'fp.car';
 const ROWS = 4;             // menu rows in view: big enough to hit while driving
@@ -99,6 +99,9 @@ export class CarMode {
     const screen = el('div', 'car-screen');
     this.bar = el('div', 'car-bar');
     this.barState = el('span', 'car-bar-state');
+    this.barPlay = el('span');
+    this.barRepeat = repeatIcon('bar-repeat');
+    this.barState.append(this.barPlay, this.barRepeat);
     this.barTitle = el('span', 'car-bar-title');
     this.barCount = el('span', 'car-bar-count');
     this.bar.append(this.barState, this.barTitle, this.barCount);
@@ -260,7 +263,8 @@ export class CarMode {
     if (this.root.hidden) return;
     const p = this.player;
     const m = this.menu[this.menu.length - 1];
-    this.barState.textContent = p.playing ? (p.paused ? '❚❚' : '▶') : '';
+    this.barPlay.textContent = p.playing ? (p.paused ? '❚❚' : '▶') : '';
+    setRepeatIcon(this.barRepeat, p.playing ? repeatMode(p) : 'off');
     // Side segments move the menu highlight while a menu is open.
     this.icons.prev.setAttribute('d', m ? ICONS.up : ICONS.prev);
     this.icons.next.setAttribute('d', m ? ICONS.down : ICONS.next);

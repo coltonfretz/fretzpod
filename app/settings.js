@@ -123,3 +123,8 @@ export const settings = {
   },
   name(k) { return DEFS[k].names[this.get(k)]; },
 };
+
+// What repeats now: the hold menu's Repeat (player.loop, an album/artist/
+// playlist id) loops the whole set whatever the setting says; otherwise
+// Settings > Repeat. Used by the players (main.js) and the top bars' icon.
+export const repeatMode = (player) => (player?.loop ? 'all' : settings.get('repeat'));

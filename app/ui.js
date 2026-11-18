@@ -5,8 +5,8 @@
 // list costs the same as a 5-song one. Long lists load from Jellyfin in pages
 // as the selection gets near them.
 import * as api from './api.js';
-import { settings } from './settings.js';
-import { el, fmt, log, logLines, prettyGenre, canVibrate } from './util.js';
+import { settings, repeatMode } from './settings.js';
+import { el, fmt, log, logLines, prettyGenre, canVibrate, repeatIcon, setRepeatIcon } from './util.js';
 import { StarPinball, PINBALL_TABLES, PINBALL_BALLS, pinballSave, pinballOpen, lockText } from './pinball.js';
 import { goldProgress, goldId, bodyOpen } from './bodies.js';
 import { Fishing, FISH_SPOTS, FISH_LURES, FISH_KINDS, fishSave, fishOpen, fishLockText } from './fishing.js';
@@ -814,7 +814,9 @@ export class UI {
     this.stack = [];
     this.ticks = [];
     this.titleEl = screenEl.querySelector('.bar-title');
-    this.stateEl = screenEl.querySelector('.bar-state');
+    this.stateEl = screenEl.querySelector('.bar-play');
+    this.repeatEl = repeatIcon('bar-repeat');
+    this.stateEl.after(this.repeatEl);
     this.views = screenEl.querySelector('.views');
     this.letterEl = el('div', 'letter');
     this.toastEl = el('div', 'toast');
@@ -822,6 +824,8 @@ export class UI {
     this.view = el('div', 'view');
     this.views.append(this.view);
     this.artPane = this.makeArtPane();
+    // Settings > Repeat changes the bar's repeat icon right away.
+    window.addEventListener('fp-setting', (e) => { if (e.detail === 'repeat') this.renderBar(); });
     player.on((what) => {
       const top = this.top;
       if (what === 'state' || what === 'song') this.renderBar();
@@ -919,6 +923,7 @@ export class UI {
   renderBar() {
     const p = this.player;
     this.stateEl.textContent = !p.playing ? '' : p.paused ? '❚❚' : '▶';
+    setRepeatIcon(this.repeatEl, p.playing ? repeatMode(p) : 'off');
   }
 
   // ---------- wheel input ----------
@@ -1501,8 +1506,10 @@ export class UI {
   // Play a list of songs starting at index i, then show Now Playing.
   // Already on Now Playing (Instant Mix from its hold menu): stay on it
   // rather than stacking a second one.
-  playSongs(items, i) {
-    this.player.play(items, i, { shuffle: settings.get('shuffle') === 'songs' });
+  // loop: the hold menu's Repeat, the id of the album/artist/playlist that
+  // starts over when it ends (Output.loop).
+  playSongs(items, i, loop = null) {
+    this.player.play(items, i, { shuffle: settings.get('shuffle') === 'songs', loop });
     this.showNowPlaying();
   }
 
@@ -1586,7 +1593,7 @@ export class UI {
 
   albumMenu(a, ctx = {}) {
     const songs = () => api.albumSongs(a.Id).then((d) => d.Items);
-    const rows = [...this.queueRows(songs), this.mixRow(a.Id), this.playlistRow(songs)];
+    const rows = [...this.queueRows(songs), this.repeatRow(songs, a.Id), this.mixRow(a.Id), this.playlistRow(songs)];
     const artist = a.AlbumArtists?.[0];
     if (artist?.Id && artist.Id !== ctx.artistId) rows.push(this.goRow('Go to Artist', (ui) => ui.artist(artist)));
     return new HoldMenu(a.Name, { rows });
@@ -1594,12 +1601,35 @@ export class UI {
 
   artistMenu(a) {
     const songs = () => api.artistSongs(a.Id).then((d) => d.Items);
-    return new HoldMenu(a.Name, { rows: [...this.queueRows(songs), this.mixRow(a.Id)] });
+    return new HoldMenu(a.Name, { rows: [...this.queueRows(songs), this.repeatRow(songs, a.Id), this.mixRow(a.Id)] });
   }
 
   playlistMenu(pl) {
     const songs = () => api.playlistSongs(pl.Id).then((d) => d.Items);
-    return new HoldMenu(pl.Name, { rows: this.queueRows(songs) });
+    return new HoldMenu(pl.Name, { rows: [...this.queueRows(songs), this.repeatRow(songs, pl.Id)] });
+  }
+
+  // Repeat (albums, artists, playlists): plays the whole thing from the first
+  // song and starts it over at the end, until something else is played or
+  // Settings > Repeat is changed (main.js repeat). Shuffle still applies.
+  // id: the album, artist or playlist; player.loop holds it while it loops,
+  // so its menu reads "Repeat On" and choosing the row again turns it off
+  // (the music keeps going, it just stops at the end).
+  repeatRow(load, id) {
+    const looping = () => this.player.playing && this.player.loop === id;
+    return {
+      label: 'Repeat',
+      value: () => (looping() ? 'On' : ''),
+      select: (ui) => {
+        ui.closeMenus();
+        if (looping()) { ui.player.loop = null; ui.toast('Repeat Off'); return; }
+        load().then((items) => {
+          if (!items.length) { ui.toast('No songs'); return; }
+          ui.playSongs(items, 0, id);
+          ui.toast('Repeat On');
+        }).catch((e) => { log(`repeat: ${e.message}`); ui.toast("Couldn't load the songs"); });
+      },
+    };
   }
 
   // Play Next / Play Later. With nothing playing, both just play the songs.

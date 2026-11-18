@@ -1,7 +1,7 @@
 // Wires the pieces together: settings -> body color, the player, the wheel,
 // the screen stack, sign-in/out, and the battery icon.
 import * as api from './api.js';
-import { settings, BITRATE, inHours } from './settings.js';
+import { settings, BITRATE, inHours, repeatMode } from './settings.js';
 import { Player, streamType } from './player.js';
 import { Wheel } from './wheel.js';
 import { UI } from './ui.js';
@@ -45,13 +45,22 @@ phoneDark.addEventListener('change', applyScreen);
 setInterval(applyScreen, 60000);
 document.addEventListener('visibilitychange', applyScreen);
 
+// The hold menu's Repeat (ui.js) loops just the album, artist or playlist it
+// started: player.loop is on until something else plays (Output.play) or
+// Settings > Repeat is changed. WHY a flag and not the setting: flipping the
+// setting to All would keep looping every album played after it.
+// `player` is declared first so a repeat() call during Output's constructor
+// (speakers restored from last time) can't hit it before it exists.
+let player = null;
+const repeat = () => repeatMode(player);
 const phone = new Player($('#audio'), {
   bitrate: () => BITRATE[settings.get('quality')],
-  repeat: () => settings.get('repeat'),
+  repeat,
 });
 // Everything else talks to `player`: the phone, or a Sonos once one is picked
 // under Speakers (optional, allowed accounts only; speakers.js).
-const player = new Output(phone, { repeat: () => settings.get('repeat') });
+player = new Output(phone, { repeat });
+window.addEventListener('fp-setting', (e) => { if (e.detail === 'repeat') player.loop = null; });
 
 let ui = null;
 let car = null;

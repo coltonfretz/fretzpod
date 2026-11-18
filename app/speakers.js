@@ -399,6 +399,7 @@ export class Output extends Emitter {
     this.phone = phone;
     this.opts = opts;
     this.p = phone;
+    this.looping = null;   // hold menu Repeat: id of the set that starts over at its end (main.js repeat)
     this.watch(phone);
     // Speakers playing from before the app was closed: follow them again.
     const back = SpeakerPlayer.restore(opts);
@@ -438,7 +439,22 @@ export class Output extends Emitter {
   get volume() { return this.p.volume; }
   set volume(v) { this.p.volume = v; }
   get canVolume() { return this.p.canVolume; }
-  play(...a) { return this.p.play(...a); }
+  // Every new play from the app comes through here, so a Repeat loop ends
+  // when anything else starts. Moving the music between phone and speakers
+  // (use) skips this, so the loop goes along with it.
+  play(items, index, o = {}) {
+    this.loop = o.loop || null;
+    return this.p.play(items, index, o);
+  }
+
+  // Set from here, the hold menu (Repeat again = off) and main.js (Settings >
+  // Repeat changed). 'state' redraws the top bar's repeat icon.
+  get loop() { return this.looping; }
+  set loop(id) {
+    if (id === this.looping) return;
+    this.looping = id;
+    this.emit('state');
+  }
   playNext(items) { return this.p.playNext(items); }
   playLater(items) { return this.p.playLater(items); }
   toggle() { return this.p.toggle(); }
