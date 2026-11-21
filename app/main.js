@@ -198,6 +198,24 @@ window.addEventListener('fp-loadfail', checkServer);
 setInterval(() => { if (api.OFFLINE && !document.hidden) checkServer(); }, 60000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) checkServer(); });
 
+// Android Auto (android AutoService/MediaService): something picked in the
+// car's lists or asked for by voice, from the songs on the phone. Plays
+// like a pick on the phone, and shows Now Playing.
+function playFromCar(json) {
+  let w;
+  try { w = JSON.parse(json); } catch { return; }
+  if (!api.getSession()) return;
+  if (w.shuffle) { ui.shuffleSongs(); return; }
+  const items = api.storedItems(w.ids || []);
+  if (!items.length) { ui.shuffleSongs(); return; }
+  const at = Math.max(0, items.findIndex((s) => s.Id === w.ids[w.index || 0]));
+  ui.playSongs(items, at);
+}
+if (window.FretzpodAndroid?.autoPending) {
+  window.fretzpodAuto = playFromCar;
+  try { const waiting = window.FretzpodAndroid.autoPending(); if (waiting) setTimeout(() => playFromCar(waiting), 0); } catch { /* none */ }
+}
+
 // Software Update (sideloaded Android app, update.js): look now and then,
 // and when there's a new version put it on screen, but only over the main
 // menu, never in the middle of something.

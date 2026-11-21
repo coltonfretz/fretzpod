@@ -12,6 +12,7 @@ import { goldProgress, goldId, bodyOpen } from './bodies.js';
 import { Fishing, FISH_SPOTS, FISH_LURES, FISH_KINDS, fishSave, fishOpen, fishLockText } from './fishing.js';
 import * as scores from './scores.js';
 import * as update from './update.js';
+import * as phone from './phone.js';
 import { streamType } from './player.js';
 import { listSpeakers } from './speakers.js';
 import { HOLD_MS, HOLD_REPEAT_MS } from './wheel.js';
@@ -1414,8 +1415,30 @@ export class UI {
         // The shared boards run beside a site's server (scores/); the app build has none.
         ...(api.HELPERS ? [{ label: 'High Scores', arrow: true, select: (ui) => ui.push(ui.highScores()) }] : []),
         { label: 'Alarms', arrow: true, select: (ui) => ui.push(ui.alarmsMenu()) },
+        ...this.phoneRows(),
       ],
     });
+  }
+
+  // A dedicated player (Fretzpod is the home screen; phone.js): the
+  // flashlight, and the phone's own apps, since there's no app drawer.
+  phoneRows() {
+    if (!phone.isHome()) return [];
+    const app = (label, what) => ({
+      label, arrow: '\u2197\uFE0E',
+      select: (ui) => { if (!phone.open(what)) ui.toast(`No ${label.toLowerCase()} on this phone`); },
+    });
+    return [
+      ...(phone.hasTorch() ? [{
+        label: 'Flashlight',
+        value: () => (phone.torchOn() ? 'On' : 'Off'),
+        select: (ui) => { phone.setTorch(!phone.torchOn()); ui.render(); },
+      }] : []),
+      app('Camera', 'camera'),
+      app('Photos', 'photos'),
+      app('Clock', 'clock'),
+      app('Calculator', 'calculator'),
+    ];
   }
 
   // Extras > Alarms (alarms.js; this.alarms is set by main.js): the alarm,
@@ -1898,6 +1921,7 @@ export class UI {
       { label: 'Sleep Mode', value: () => settings.name('sleepMode'), arrow: true, select: (ui) => ui.push(ui.scheduleMenu(opt, 'Sleep Mode', 'sleepMode', 'sleepFrom', 'sleepTo')) },
       { label: 'In the Car', arrow: true, select: (ui) => ui.push(ui.car()) },
       ...(api.CAN_STORE ? [{ label: 'Phone Library', arrow: true, select: (ui) => ui.push(ui.phoneLibrary()) }] : []),
+      ...(phone.isHome() ? [{ label: 'Phone Settings', arrow: '\u2197\uFE0E', select: () => phone.open('settings') }] : []),
       { label: 'About', arrow: true, select: (ui) => ui.push(ui.about()) },
       { label: 'Sign Out', arrow: true, select: (ui) => ui.push(ui.confirmSignOut()) },
     );
