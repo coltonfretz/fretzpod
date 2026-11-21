@@ -409,7 +409,7 @@ export class Player extends Emitter {
     let bytes = 0;
     try {
       const url = api.songStreamUrl(item, seg.ps, {
-        container: streamType.container, codec: streamType.codec,
+        container: streamType.container, codec: streamType.codec, mux: !!streamType.mux,
         bitrate: this.opts.bitrate(), startSec: offset,
       });
       const res = await fetch(url, { headers: { Authorization: api.authHeader() }, signal: ctrl.signal });

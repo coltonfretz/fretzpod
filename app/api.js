@@ -280,9 +280,70 @@ function streamUrl(item, ps, bitrate, startSec, params) {
 }
 
 // One song as ADTS AAC (or MP3) for the continuous stream; fetched with the
-// Authorization header, so no token in the URL.
-export const songStreamUrl = (item, ps, { container, codec, bitrate, startSec = 0 }) =>
-  streamUrl(item, ps, bitrate, startSec, { Container: container, TranscodingContainer: container, AudioCodec: codec });
+// Authorization header, so no token in the URL. A song stored on the phone
+// (the app's offline library, below) comes from the phone instead, when
+// the stream is raw ADTS AAC, the format it's stored in.
+export const songStreamUrl = (item, ps, { container, codec, bitrate, startSec = 0, mux }) =>
+  (!mux && codec === 'aac' && isStored(item.Id)) ? storedUrl(item.Id, startSec)
+    : streamUrl(item, ps, bitrate, startSec, { Container: container, TranscodingContainer: container, AudioCodec: codec });
+
+// ---------- songs stored on the phone (Android app) ----------
+//
+// The dedicated players keep the library on the phone (android/Library.java):
+// each song as 256k ADTS AAC, served back to this page at /local/song/<id>.aac.
+// Elsewhere there's no native side and nothing is stored.
+const NATIVE = typeof window !== 'undefined' && window.FretzpodAndroid?.libraryIds ? window.FretzpodAndroid : null;
+export const CAN_STORE = !!NATIVE;
+export const STORE_BITRATE = 256000;
+let stored = new Set();
+try { if (NATIVE) stored = new Set(JSON.parse(NATIVE.libraryIds())); } catch { stored = new Set(); }
+export const isStored = (id) => stored.has(id);
+const storedUrl = (id, startSec) => `/local/song/${id}.aac` + (startSec > 0 ? `?start=${startSec.toFixed(3)}` : '');
+
+// {songs, bytes, free, busy}, or null off the app.
+export function storedInfo() {
+  try { return NATIVE ? JSON.parse(NATIVE.libraryInfo()) : null; } catch { return null; }
+}
+
+// Saves songs to the phone, one at a time in the background. onEach gets
+// {id, ok, done, total, error} after every song.
+let onSaved = null;
+if (NATIVE) {
+  window.fretzpodLibrary = (json) => {
+    let r; try { r = JSON.parse(json); } catch { return; }
+    if (r.ok && r.id) stored.add(r.id);
+    if (!r.ok) log(`saving song ${r.done}/${r.total} failed: ${r.error}`);
+    onSaved?.(r);
+  };
+}
+// Returns how many weren't stored yet. Songs already stored go along too,
+// so their details get saved beside them (the first test saves had none).
+export function saveSongs(items, onEach) {
+  if (!NATIVE || !session) return 0;
+  const todo = items.filter((x) => x.Type === 'Audio');
+  if (!todo.length) return 0;
+  onSaved = onEach;
+  NATIVE.librarySave(JSON.stringify(todo.map((x) => ({
+    id: x.Id,
+    item: x,
+    secs: (x.RunTimeTicks || 0) / 1e7,
+    url: streamUrl(x, newId(), STORE_BITRATE, 0, { Container: 'aac', TranscodingContainer: 'aac', AudioCodec: 'aac' }),
+  }))), authHeader());
+  return todo.filter((x) => !stored.has(x.Id)).length;
+}
+
+// Stored songs with their details, sorted like an iPod: artist, album,
+// disc, track. For playing with Jellyfin out of reach.
+export function storedSongs() {
+  let list = [];
+  try { list = NATIVE ? JSON.parse(NATIVE.libraryItems()) : []; } catch { list = []; }
+  const key = (s) => [artistOf(s).toLowerCase(), (s.Album || '').toLowerCase()];
+  return list.filter((s) => stored.has(s.Id)).sort((a, b) => {
+    const [ra, la] = key(a), [rb, lb] = key(b);
+    return ra.localeCompare(rb) || la.localeCompare(lb)
+      || (a.ParentIndexNumber || 0) - (b.ParentIndexNumber || 0) || (a.IndexNumber || 0) - (b.IndexNumber || 0);
+  });
+}
 
 // Basic mode (player.js): a plain <audio src>, which can't send headers, so
 // the token rides in the URL as ApiKey= (Jellyfin 12.2 rejects api_key=), as

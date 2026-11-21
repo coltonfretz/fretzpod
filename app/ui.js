@@ -1116,6 +1116,17 @@ export class UI {
       { label: `Can't reach ${api.SERVER_NAME}` },
       { label: 'Try again', select: () => retry() },
     ];
+    // Songs saved on the phone (Android app) play without the server.
+    // Full browsing offline is phase 2 of the dedicated players.
+    const saved = api.CAN_STORE ? api.storedSongs() : [];
+    if (saved.length) {
+      rows.push(
+        { label: 'Saved Songs', arrow: true, select: (ui) => ui.push(new List('Saved Songs', {
+          rows: saved.map((s) => ({ label: s.Name, sub: api.artistOf(s), select: (u, i) => u.playSongs(saved, i) })),
+        })) },
+        { label: 'Shuffle Saved Songs', select: (ui) => { ui.player.play(saved, Math.floor(Math.random() * saved.length), { shuffle: true }); ui.showNowPlaying(); } },
+      );
+    }
     if (api.BYOS) rows.push({ label: 'Change server', arrow: true, select: () => this.onServer() });
     rows.push({ label: 'Sign out', arrow: true, select: (ui) => ui.push(ui.confirmSignOut()) });
     const screen = new List(api.SERVER_NAME, { rows, start: 1 });
@@ -1596,17 +1607,22 @@ export class UI {
     const rows = [...this.queueRows(songs), this.repeatRow(songs, a.Id), this.mixRow(a.Id), this.playlistRow(songs)];
     const artist = a.AlbumArtists?.[0];
     if (artist?.Id && artist.Id !== ctx.artistId) rows.push(this.goRow('Go to Artist', (ui) => ui.artist(artist)));
+    if (api.CAN_STORE) rows.push(this.saveRow(songs));
     return new HoldMenu(a.Name, { rows });
   }
 
   artistMenu(a) {
     const songs = () => api.artistSongs(a.Id).then((d) => d.Items);
-    return new HoldMenu(a.Name, { rows: [...this.queueRows(songs), this.repeatRow(songs, a.Id), this.mixRow(a.Id)] });
+    const rows = [...this.queueRows(songs), this.repeatRow(songs, a.Id), this.mixRow(a.Id)];
+    if (api.CAN_STORE) rows.push(this.saveRow(songs));
+    return new HoldMenu(a.Name, { rows });
   }
 
   playlistMenu(pl) {
     const songs = () => api.playlistSongs(pl.Id).then((d) => d.Items);
-    return new HoldMenu(pl.Name, { rows: [...this.queueRows(songs), this.repeatRow(songs, pl.Id)] });
+    const rows = [...this.queueRows(songs), this.repeatRow(songs, pl.Id)];
+    if (api.CAN_STORE) rows.push(this.saveRow(songs));
+    return new HoldMenu(pl.Name, { rows });
   }
 
   // Repeat (albums, artists, playlists): plays the whole thing from the first
@@ -1685,6 +1701,26 @@ export class UI {
           total: d.Items.length,
         })),
       })),
+    };
+  }
+
+  // Save to Phone (Android app): stores the songs on the phone so they play
+  // without Jellyfin (api.saveSongs). The by-hand way to fill the library
+  // until sync does the whole thing (Fretzpod plan, dedicated players).
+  saveRow(load) {
+    return {
+      label: 'Save to Phone',
+      select: (ui) => {
+        ui.closeMenus();
+        load().then((items) => {
+          let failed = 0;
+          const n = api.saveSongs(items, (r) => {
+            if (!r.ok) failed++;
+            if (r.done === r.total) ui.toast(failed ? `Saved, ${failed} failed` : 'Saved to Phone');
+          });
+          ui.toast(n ? `Saving ${n} song${n === 1 ? '' : 's'}` : 'Already on the phone');
+        }).catch((e) => { log(`save: ${e.message}`); ui.toast("Couldn't load the songs"); });
+      },
     };
   }
 
@@ -1807,6 +1843,12 @@ export class UI {
       opt('sleep'),
       { label: 'Sleep Mode', value: () => settings.name('sleepMode'), arrow: true, select: (ui) => ui.push(ui.scheduleMenu(opt, 'Sleep Mode', 'sleepMode', 'sleepFrom', 'sleepTo')) },
       { label: 'In the Car', arrow: true, select: (ui) => ui.push(ui.car()) },
+      ...(api.CAN_STORE ? [{ label: 'On Phone', value: () => {
+        const i = api.storedInfo();
+        if (!i) return '';
+        const gb = (b) => (b / 1e9).toFixed(b < 1e10 ? 1 : 0);
+        return `${i.songs} · ${gb(i.bytes)} of ${gb(i.bytes + i.free)} GB`;
+      } }] : []),
       { label: 'About', arrow: true, select: (ui) => ui.push(ui.about()) },
       { label: 'Sign Out', arrow: true, select: (ui) => ui.push(ui.confirmSignOut()) },
     );
