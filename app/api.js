@@ -3,6 +3,7 @@
 // Jellyfin; see DESIGN.md "How it fits together" for why there's no proxy.
 import { store, newId, log, clearLog } from './util.js';
 import site from './config.js';
+import { Local } from './offline.js';
 
 export const VERSION = '0.29.0';
 
@@ -220,53 +221,83 @@ function items(params, opts) {
   }), opts);
 }
 
-export const albums = (start, limit) =>
+const on_albums = (start, limit) =>
   items({ IncludeItemTypes: 'MusicAlbum', SortBy: 'SortName', StartIndex: start, Limit: limit });
 // Every album in one go, for Cover Flow (which sorts them itself; see there).
 // ChildCount (songs per album) lets Cover Flow leave out one-song "albums".
-export const allAlbums = () => items({ IncludeItemTypes: 'MusicAlbum', EnableImages: 'false', Fields: 'ChildCount' });
-export const songs = (start, limit) =>
+const on_allAlbums = () => items({ IncludeItemTypes: 'MusicAlbum', EnableImages: 'false', Fields: 'ChildCount' });
+const on_songs = (start, limit) =>
   items({ IncludeItemTypes: 'Audio', SortBy: 'SortName', StartIndex: start, Limit: limit });
-export const albumSongs = (albumId) =>
+const on_albumSongs = (albumId) =>
   items({ ParentId: albumId, IncludeItemTypes: 'Audio', SortBy: 'ParentIndexNumber,IndexNumber,SortName' });
-export const artistAlbums = (artistId) =>
+const on_artistAlbums = (artistId) =>
   items({ IncludeItemTypes: 'MusicAlbum', AlbumArtistIds: artistId, SortBy: 'ProductionYear,SortName' });
-export const artistSongs = (artistId) =>
+const on_artistSongs = (artistId) =>
   items({ IncludeItemTypes: 'Audio', AlbumArtistIds: artistId, SortBy: 'ProductionYear,Album,ParentIndexNumber,IndexNumber', Limit: 2000 });
 // An album lists under a genre when its songs carry it: Jellyfin gives each album
 // the genres of its songs (plus whatever its online lookup adds, which genres()
 // below keeps out of the list itself).
-export const genreAlbums = (genreId) =>
+const on_genreAlbums = (genreId) =>
   items({ IncludeItemTypes: 'MusicAlbum', GenreIds: genreId, SortBy: 'AlbumArtist,SortName', Limit: 1000 });
-export const playlists = () => items({ IncludeItemTypes: 'Playlist', SortBy: 'SortName' });
-export const playlistSongs = (id) => request(`/Playlists/${id}/Items?` + qs({ userId: session.userId, Limit: 3000 }));
-export const randomSongs = (n) => items({ IncludeItemTypes: 'Audio', SortBy: 'Random', Limit: n });
-export const randomGenreSongs = (genreId, n) =>
+const on_playlists = () => items({ IncludeItemTypes: 'Playlist', SortBy: 'SortName' });
+const on_playlistSongs = (id) => request(`/Playlists/${id}/Items?` + qs({ userId: session.userId, Limit: 3000 }));
+const on_randomSongs = (n) => items({ IncludeItemTypes: 'Audio', SortBy: 'Random', Limit: n });
+const on_randomGenreSongs = (genreId, n) =>
   items({ IncludeItemTypes: 'Audio', GenreIds: genreId, SortBy: 'Random', Limit: n });
-export const randomAlbumsWithArt = (n) =>
+const on_randomAlbumsWithArt = (n) =>
   items({ IncludeItemTypes: 'MusicAlbum', SortBy: 'Random', Limit: n, ImageTypes: 'Primary' });
 
-export const albumArtists = (start, limit) => request('/Artists/AlbumArtists?' + qs({
+const on_albumArtists = (start, limit) => request('/Artists/AlbumArtists?' + qs({
   userId: session.userId, StartIndex: start, Limit: limit, SortBy: 'SortName',
   EnableTotalRecordCount: 'true', EnableImages: 'false', EnableUserData: 'false',
 }));
 // Only genres that songs carry. The song tags hold the library's ~20 broad genres
 // (cleanup 2026-10-29); without IncludeItemTypes, Jellyfin also lists the hundreds
 // of genres its online lookups attach to albums and artists ("acid house", "zolo").
-export const genres = (start, limit) => request('/MusicGenres?' + qs({
+const on_genres = (start, limit) => request('/MusicGenres?' + qs({
   userId: session.userId, IncludeItemTypes: 'Audio', Recursive: 'true',
   StartIndex: start, Limit: limit, SortBy: 'SortName',
   EnableTotalRecordCount: 'true', EnableImages: 'false',
 }));
 
+// Offline (the app, with songs stored and Jellyfin out of reach), each of
+// these answers from the phone's copy (offline.js) in the same shape.
+const both = (online, offline) => (...a) => (OFFLINE ? Promise.resolve(offline(lib(), ...a)) : online(...a));
+export const albums = both(on_albums, (L, s, n) => L.albums(s, n));
+export const allAlbums = both(on_allAlbums, (L) => L.allAlbums());
+export const songs = both(on_songs, (L, s, n) => L.songsPage(s, n));
+export const albumSongs = both(on_albumSongs, (L, id) => L.albumSongs(id));
+export const artistAlbums = both(on_artistAlbums, (L, id) => L.artistAlbums(id));
+export const artistSongs = both(on_artistSongs, (L, id) => L.artistSongs(id));
+export const genreAlbums = both(on_genreAlbums, (L, id) => L.genreAlbums(id));
+export const playlists = both(on_playlists, (L) => L.playlists());
+export const playlistSongs = both(on_playlistSongs, (L, id) => L.playlistSongs(id));
+export const randomSongs = both(on_randomSongs, (L, n) => L.randomSongs(n));
+export const randomGenreSongs = both(on_randomGenreSongs, (L, id, n) => L.randomGenreSongs(id, n));
+export const randomAlbumsWithArt = both(on_randomAlbumsWithArt, (L, n) => L.randomAlbums(n));
+export const albumArtists = both(on_albumArtists, (L, s, n) => L.albumArtists(s, n));
+export const genres = both(on_genres, (L, s, n) => L.genres(s, n));
+export const artistLetters = both(on_artistLetters, (L) => L.artistLetters());
+export const albumLetters = both(on_albumLetters, (L) => L.albumLetters());
+export const search = both(on_search, (L, term) => L.search(term));
+// Favorites: the ids are kept on the phone whenever the list is fetched
+// online, so the offline list matches.
+export const favoriteSongs = both(
+  () => on_favoriteSongs().then((d) => { metaPut('favorites', d.Items.map((x) => x.Id)); return d; }),
+  (L) => L.favoriteSongs(),
+);
+
 // Who a song is by, for lists, Now Playing and the lock screen.
 export const artistOf = (item) => item.AlbumArtist || item.Artists?.[0] || '';
 
-// Album art needs no token.
+// Album art needs no token. Offline it's the copy saved with the songs
+// (one size, 600, scaled by the page).
 export function artUrl(item, size) {
   const id = item.Type === 'MusicAlbum' ? item.Id : (item.AlbumId || item.Id);
+  if (OFFLINE) return `/local/art/${id}`;
   return `${JF}/Items/${id}/Images/Primary?fillWidth=${size}&fillHeight=${size}&quality=90`;
 }
+const SAVED_ART = 600;
 
 // A song from Jellyfin's universal endpoint. StartTimeTicks lets a seek past
 // what's buffered restart the song partway in.
@@ -298,6 +329,26 @@ export const STORE_BITRATE = 256000;
 let stored = new Set();
 try { if (NATIVE) stored = new Set(JSON.parse(NATIVE.libraryIds())); } catch { stored = new Set(); }
 export const isStored = (id) => stored.has(id);
+export const storedCount = () => stored.size;
+
+// Offline: Jellyfin is out of reach and the phone has songs (main.js
+// decides). Every library call above answers from `lib()` meanwhile.
+export let OFFLINE = false;
+let local = null;
+const metaGet = (name) => { try { return NATIVE ? JSON.parse(NATIVE.libraryGet(name) || 'null') : null; } catch { return null; } };
+const metaPut = (name, v) => { try { NATIVE?.libraryPut(name, JSON.stringify(v)); } catch { /* not kept */ } };
+function lib() {
+  if (!local) local = new Local(storedSongs(), metaGet('playlists') || {}, new Set(metaGet('favorites') || []));
+  return local;
+}
+export function setOffline(on) {
+  if (on === OFFLINE) return;
+  OFFLINE = on;
+  local = null;
+  log(on ? 'offline: playing from the phone' : 'back online');
+  if (!on) sendFavQueue();
+  window.dispatchEvent(new Event('fp-offline'));
+}
 const storedUrl = (id, startSec) => `/local/song/${id}.aac` + (startSec > 0 ? `?start=${startSec.toFixed(3)}` : '');
 
 // {songs, bytes, free, busy}, or null off the app.
@@ -311,25 +362,46 @@ let onSaved = null;
 if (NATIVE) {
   window.fretzpodLibrary = (json) => {
     let r; try { r = JSON.parse(json); } catch { return; }
-    if (r.ok && r.id) stored.add(r.id);
+    if (r.ok && r.id) { stored.add(r.id); local = null; }
     if (!r.ok) log(`saving song ${r.done}/${r.total} failed: ${r.error}`);
     onSaved?.(r);
   };
 }
-// Returns how many weren't stored yet. Songs already stored go along too,
-// so their details get saved beside them (the first test saves had none).
-export function saveSongs(items, onEach) {
-  if (!NATIVE || !session) return 0;
-  const todo = items.filter((x) => x.Type === 'Audio');
-  if (!todo.length) return 0;
+// Resolves to how many weren't stored yet. Songs already stored go along
+// too, so their details, art and lyrics get saved beside them. The items
+// are fetched again with their genres (lists load without them).
+// playlist: {Id, Name} when saving a playlist, so it lists offline too.
+export async function saveSongs(items, onEach, playlist = null) {
+  if (!NATIVE || !session || OFFLINE) return 0;
+  const ids = items.filter((x) => x.Type === 'Audio').map((x) => x.Id);
+  if (!ids.length) return 0;
+  const full = [];
+  for (let i = 0; i < ids.length; i += 100) {
+    const d = await request('/Items?' + qs({ userId: session.userId, Ids: ids.slice(i, i + 100).join(','), Fields: 'Genres', EnableUserData: 'false' }));
+    full.push(...d.Items);
+  }
+  if (playlist) {
+    const pl = metaGet('playlists') || {};
+    pl[playlist.Id] = { Name: playlist.Name, ItemIds: ids };
+    metaPut('playlists', pl);
+  }
+  local = null;
   onSaved = onEach;
-  NATIVE.librarySave(JSON.stringify(todo.map((x) => ({
+  NATIVE.librarySave(JSON.stringify(full.map((x) => ({
     id: x.Id,
     item: x,
     secs: (x.RunTimeTicks || 0) / 1e7,
     url: streamUrl(x, newId(), STORE_BITRATE, 0, { Container: 'aac', TranscodingContainer: 'aac', AudioCodec: 'aac' }),
+    art: x.AlbumId ? { id: x.AlbumId, url: `${JF}/Items/${x.AlbumId}/Images/Primary?fillWidth=${SAVED_ART}&fillHeight=${SAVED_ART}&quality=90` } : undefined,
+    lyrics: x.HasLyrics ? `${JF}/Audio/${x.Id}/Lyrics` : undefined,
   }))), authHeader());
-  return todo.filter((x) => !stored.has(x.Id)).length;
+  return full.filter((x) => !stored.has(x.Id)).length;
+}
+
+async function localJson(path) {
+  const res = await fetch(path);
+  if (!res.ok) throw new Error(`${res.status} from ${path.split('/').slice(0, 3).join('/')}`);
+  return res.json();
 }
 
 // Stored songs with their details, sorted like an iPod: artist, album,
@@ -368,7 +440,7 @@ function letterIndex(starts, total) {
 // Jellyfin's name filters give where each letter starts. Checked 2026-10-22
 // against the sorted lists: right for album artists (NameLessThan) and albums
 // (NameStartsWithOrGreater), wrong for songs, so Songs doesn't get the jump.
-export async function artistLetters() {
+async function on_artistLetters() {
   const count = (extra) => request('/Artists/AlbumArtists?' + qs({
     userId: session.userId, Limit: 0, EnableTotalRecordCount: 'true', ...extra,
   })).then((d) => d.TotalRecordCount);
@@ -376,7 +448,7 @@ export async function artistLetters() {
   return letterIndex(starts, total);
 }
 
-export async function albumLetters() {
+async function on_albumLetters() {
   const count = (extra) => items({ IncludeItemTypes: 'MusicAlbum', Limit: 0, ...extra }).then((d) => d.TotalRecordCount);
   const [total, ...atOrAfter] = await Promise.all([count({}), ...LETTERS.map((L) => count({ NameStartsWithOrGreater: L }))]);
   return letterIndex(atOrAfter.map((n) => total - n), total);
@@ -386,7 +458,7 @@ export async function albumLetters() {
 
 // Artists, albums and songs matching what's been typed, as full items (songs
 // need everything the player uses: album, artist, length).
-export async function search(term, signal) {
+async function on_search(term, signal) {
   const opts = { signal };
   const [artists, albumsRes, songsRes] = await Promise.all([
     request('/Artists/AlbumArtists?' + qs({ userId: session.userId, searchTerm: term, Limit: 5, EnableImages: 'false' }), opts),
@@ -401,7 +473,7 @@ export async function search(term, signal) {
 // [{text, start (seconds) or null, cues}], or null when the song has none.
 export async function lyrics(itemId) {
   try {
-    const d = await request(`/Audio/${itemId}/Lyrics`);
+    const d = OFFLINE ? await localJson(`/local/lyrics/${itemId}.json`) : await request(`/Audio/${itemId}/Lyrics`);
     const lines = d?.Lyrics || [];
     // Cues: word-by-word timing, when the lyrics have it (enhanced LRC);
     // each is a character range of the line and when it's sung.
@@ -423,22 +495,49 @@ export async function lyrics(itemId) {
 // every Jellyfin app too. Song lists load without user data (faster), so
 // Now Playing asks about one song at a time.
 
-export const isFavorite = (id) =>
-  request(`/UserItems/${id}/UserData?` + qs({ userId: session.userId })).then((d) => !!d?.IsFavorite);
-export const setFavorite = (id, on) =>
+// Offline, hearts change the phone's copy and wait in a queue (fp.favQueue,
+// id -> on) that's sent once Jellyfin answers again (setOffline).
+export const isFavorite = (id) => (OFFLINE ? Promise.resolve(lib().favs.has(id))
+  : request(`/UserItems/${id}/UserData?` + qs({ userId: session.userId })).then((d) => !!d?.IsFavorite));
+const sendFavorite = (id, on) =>
   request(`/UserFavoriteItems/${id}?` + qs({ userId: session.userId }), { method: on ? 'POST' : 'DELETE' })
     .then((d) => (d ? !!d.IsFavorite : on));
+export function setFavorite(id, on) {
+  if (OFFLINE) {
+    const q = favQueue();
+    q[id] = on;
+    store.set('fp.favQueue', JSON.stringify(q));
+    keepFavorite(id, on);
+    return Promise.resolve(on);
+  }
+  return sendFavorite(id, on).then((v) => { keepFavorite(id, v); return v; });
+}
+const favQueue = () => { try { return JSON.parse(store.get('fp.favQueue', '{}')) || {}; } catch { return {}; } };
+function keepFavorite(id, on) {
+  if (!NATIVE) return;
+  const ids = new Set(metaGet('favorites') || []);
+  if (on) ids.add(id); else ids.delete(id);
+  metaPut('favorites', [...ids]);
+  if (local) { if (on) local.favs.add(id); else local.favs.delete(id); }
+}
+async function sendFavQueue() {
+  const q = favQueue();
+  for (const [id, on] of Object.entries(q)) {
+    try { await sendFavorite(id, on); delete q[id]; } catch (e) { log(`queued favorite: ${e.message}`); break; }
+  }
+  store.set('fp.favQueue', JSON.stringify(q));
+}
 // ---------- the hold menu (ui.js) ----------
 
 // Instant Mix: Jellyfin's own "songs like this one", from a song, an album or
 // an artist (its genres, the artist, similar artists).
-export const instantMix = (id) => request(`/Items/${id}/InstantMix?` + qs({
+export const instantMix = (id) => OFFLINE ? Promise.reject(new Error('offline')) : request(`/Items/${id}/InstantMix?` + qs({
   userId: session.userId, Limit: 100, EnableUserData: 'false', ImageTypeLimit: '1', EnableImageTypes: 'Primary',
 }));
 // Fails with 403 on a playlist this account can only look at (someone
 // else's, shared without editing).
-export const addToPlaylist = (playlistId, ids) =>
+export const addToPlaylist = (playlistId, ids) => OFFLINE ? Promise.reject(new Error('offline')) :
   request(`/Playlists/${playlistId}/Items?` + qs({ userId: session.userId, ids: ids.join(',') }), { method: 'POST' });
 
-export const favoriteSongs = () =>
+const on_favoriteSongs = () =>
   items({ IncludeItemTypes: 'Audio', Filters: 'IsFavorite', SortBy: 'SortName', Limit: 3000 });

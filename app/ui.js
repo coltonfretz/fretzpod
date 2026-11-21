@@ -198,6 +198,8 @@ class List {
 const MENU_ROWS = 6;
 class HoldMenu extends List {
   constructor(head, opts) {
+    // Rows that don't apply (null: offline, say) are left out.
+    if (opts.rows) opts = { ...opts, rows: opts.rows.filter(Boolean) };
     super('', { ...opts, visible: Math.min(MENU_ROWS, opts.rows?.length || MENU_ROWS) });
     this.head = head;
     this.overlay = true;      // UI.push / leaveTop: no slide
@@ -855,6 +857,21 @@ export class UI {
     return t instanceof NowPlaying && t.lyricsOn && this.player.playing && !this.player.paused;
   }
 
+  // Offline came or went (main.js checkServer): the menus on screen were
+  // loaded from the other source, so start over at the main menu, unless
+  // Now Playing is up (the music carries on either way).
+  offlineChanged() {
+    const top = this.top;
+    if (top instanceof NowPlaying) {
+      for (const s of this.stack) if (s !== top) s.leave?.();
+      const home = this.home();
+      this.stack = [home, top];
+      home.attach(this);
+      return;
+    }
+    this.reset(this.home());
+  }
+
   reset(screen) {
     for (const s of this.stack) s.leave?.();
     this.stack = [screen];
@@ -1116,17 +1133,6 @@ export class UI {
       { label: `Can't reach ${api.SERVER_NAME}` },
       { label: 'Try again', select: () => retry() },
     ];
-    // Songs saved on the phone (Android app) play without the server.
-    // Full browsing offline is phase 2 of the dedicated players.
-    const saved = api.CAN_STORE ? api.storedSongs() : [];
-    if (saved.length) {
-      rows.push(
-        { label: 'Saved Songs', arrow: true, select: (ui) => ui.push(new List('Saved Songs', {
-          rows: saved.map((s) => ({ label: s.Name, sub: api.artistOf(s), select: (u, i) => u.playSongs(saved, i) })),
-        })) },
-        { label: 'Shuffle Saved Songs', select: (ui) => { ui.player.play(saved, Math.floor(Math.random() * saved.length), { shuffle: true }); ui.showNowPlaying(); } },
-      );
-    }
     if (api.BYOS) rows.push({ label: 'Change server', arrow: true, select: () => this.onServer() });
     rows.push({ label: 'Sign out', arrow: true, select: (ui) => ui.push(ui.confirmSignOut()) });
     const screen = new List(api.SERVER_NAME, { rows, start: 1 });
@@ -1621,7 +1627,7 @@ export class UI {
   playlistMenu(pl) {
     const songs = () => api.playlistSongs(pl.Id).then((d) => d.Items);
     const rows = [...this.queueRows(songs), this.repeatRow(songs, pl.Id)];
-    if (api.CAN_STORE) rows.push(this.saveRow(songs));
+    if (api.CAN_STORE) rows.push(this.saveRow(songs, { Id: pl.Id, Name: pl.Name }));
     return new HoldMenu(pl.Name, { rows });
   }
 
@@ -1668,6 +1674,7 @@ export class UI {
 
   // Jellyfin's Instant Mix: songs like this one, played right away.
   mixRow(id) {
+    if (api.OFFLINE) return null;   // Jellyfin makes the mix
     return {
       label: 'Instant Mix',
       select: (ui) => {
@@ -1681,6 +1688,7 @@ export class UI {
 
   // Add to Playlist: the person's playlists, in the same box.
   playlistRow(load) {
+    if (api.OFFLINE) return null;
     return {
       label: 'Add to Playlist', arrow: true,
       select: (ui) => ui.push(new HoldMenu('Add to Playlist', {
@@ -1707,18 +1715,19 @@ export class UI {
   // Save to Phone (Android app): stores the songs on the phone so they play
   // without Jellyfin (api.saveSongs). The by-hand way to fill the library
   // until sync does the whole thing (Fretzpod plan, dedicated players).
-  saveRow(load) {
+  // playlist: {Id, Name}, so a saved playlist lists offline too.
+  saveRow(load, playlist = null) {
+    if (api.OFFLINE) return null;
     return {
       label: 'Save to Phone',
       select: (ui) => {
         ui.closeMenus();
-        load().then((items) => {
-          let failed = 0;
-          const n = api.saveSongs(items, (r) => {
-            if (!r.ok) failed++;
-            if (r.done === r.total) ui.toast(failed ? `Saved, ${failed} failed` : 'Saved to Phone');
-          });
-          ui.toast(n ? `Saving ${n} song${n === 1 ? '' : 's'}` : 'Already on the phone');
+        let failed = 0;
+        load().then((items) => api.saveSongs(items, (r) => {
+          if (!r.ok) failed++;
+          if (r.done === r.total) ui.toast(failed ? `Saved, ${failed} failed` : 'Saved to Phone');
+        }, playlist)).then((n) => {
+          ui.toast(n ? `Saving ${n} song${n === 1 ? '' : 's'}` : 'Updating what\'s on the phone');
         }).catch((e) => { log(`save: ${e.message}`); ui.toast("Couldn't load the songs"); });
       },
     };

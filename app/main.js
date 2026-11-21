@@ -155,6 +155,7 @@ async function checkServer(pressed = false) {
   const up = await api.reachable();
   checking = false;
   if (up) {
+    if (api.OFFLINE) { api.setOffline(false); ui.toast(`Back on ${api.SERVER_NAME}`); }
     if (downScreen && ui.top === downScreen) {
       downScreen = null;
       ui.leaveTop();
@@ -163,6 +164,17 @@ async function checkServer(pressed = false) {
     return;
   }
   if (!api.getSession()) return;
+  // The Android app with songs on the phone: carry on with those instead
+  // (offline.js), and keep checking for the server in the background.
+  if (api.CAN_STORE && api.storedCount() > 0) {
+    if (downScreen && ui.stack.includes(downScreen)) { ui.reset(ui.home()); downScreen = null; }
+    if (!api.OFFLINE) {
+      api.setOffline(true);
+      ui.offlineChanged();
+      ui.toast('Offline · music on this phone');
+    } else if (pressed) ui.toast(`Still can't reach ${api.SERVER_NAME}`);
+    return;
+  }
   if (downScreen && ui.stack.includes(downScreen)) {
     if (pressed) ui.toast(`Still can't reach ${api.SERVER_NAME}`);
     return;
@@ -180,6 +192,9 @@ window.addEventListener('offline', () => {
   offlineTimer = setTimeout(checkServer, 4000);
 });
 window.addEventListener('fp-loadfail', checkServer);
+// Offline, look for the server now and then (Wi-Fi can come back without
+// an 'online' event, when it never went away and the server did).
+setInterval(() => { if (api.OFFLINE && !document.hidden) checkServer(); }, 60000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) checkServer(); });
 
 if (api.getSession()) {
