@@ -5,7 +5,7 @@ import { store, newId, log, clearLog } from './util.js';
 import site from './config.js';
 import { Local } from './offline.js';
 
-export const VERSION = '0.31.1';
+export const VERSION = '0.31.2';
 
 // Which Jellyfin this copy talks to. A site build (build.py with a
 // site.json) knows its server: by the address the app was opened at, else
@@ -426,9 +426,11 @@ async function localJson(path) {
 
 // Stored songs with their details, sorted like an iPod: artist, album,
 // disc, track. For playing with Jellyfin out of reach.
-// Stored songs' items in the order of ids (Android Auto's picks, main.js).
+// Stored songs' items in the order of ids (Android Auto's picks, main.js),
+// from the offline library's lookup (lib(), kept until the stored list
+// changes) rather than reading every item again for each pick.
 export function storedItems(ids) {
-  const byId = new Map(storedSongs().map((s) => [s.Id, s]));
+  const byId = lib().byId;
   return ids.map((id) => byId.get(id)).filter(Boolean);
 }
 
