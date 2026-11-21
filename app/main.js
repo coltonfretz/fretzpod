@@ -1,6 +1,7 @@
 // Wires the pieces together: settings -> body color, the player, the wheel,
 // the screen stack, sign-in/out, and the battery icon.
 import * as api from './api.js';
+import * as update from './update.js';
 import { settings, BITRATE, inHours, repeatMode } from './settings.js';
 import { Player, streamType } from './player.js';
 import { Wheel } from './wheel.js';
@@ -196,6 +197,24 @@ window.addEventListener('fp-loadfail', checkServer);
 // an 'online' event, when it never went away and the server did).
 setInterval(() => { if (api.OFFLINE && !document.hidden) checkServer(); }, 60000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) checkServer(); });
+
+// Software Update (sideloaded Android app, update.js): look now and then,
+// and when there's a new version put it on screen, but only over the main
+// menu, never in the middle of something.
+let offered = 0;
+function offerUpdate() {
+  const s = update.status;
+  if (!update.shouldOffer(s) || offered === s.code) return;
+  if (!api.getSession() || ui.stack.length !== 1 || document.hidden) return;
+  offered = s.code;
+  ui.push(ui.softwareUpdate());
+}
+if (update.CAN_UPDATE) {
+  window.addEventListener('fp-update', offerUpdate);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) { update.checkIfDue(); offerUpdate(); } });
+  setInterval(() => { if (!document.hidden) { update.checkIfDue(); offerUpdate(); } }, 60000);
+  update.checkIfDue();
+}
 
 if (api.getSession()) {
   ui.reset(ui.home());

@@ -52,6 +52,7 @@ spec:
         - {name: app, mountPath: /usr/share/nginx/html, readOnly: true}
         - {name: vendor, mountPath: /usr/share/nginx/vendor, readOnly: true}
         - {name: guide, mountPath: /usr/share/nginx/guide, readOnly: true}
+        - {name: apk, mountPath: /usr/share/nginx/apk, readOnly: true}
         - {name: nginx, mountPath: /etc/nginx/conf.d, readOnly: true}
         # nginx-unprivileged keeps its pid file and temp folders in /tmp,
         # the only writable path with the read-only root filesystem.
@@ -63,6 +64,8 @@ spec:
         configMap: {name: fretzpod-vendor}
       - name: guide
         configMap: {name: fretzpod-guide}
+      - name: apk   # the Android app's self-update (deploy.sh); optional
+        configMap: {name: fretzpod-apk, optional: true}
       - name: nginx
         configMap: {name: fretzpod-nginx}
       - name: tmp

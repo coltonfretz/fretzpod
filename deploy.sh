@@ -32,6 +32,17 @@ cm fretzpod-app --from-file="$BUILD/html/"
 cm fretzpod-vendor --from-file="$BUILD/vendor/"
 cm fretzpod-guide --from-file="$BUILD/guide/"
 cm fretzpod-nginx --from-file=default.conf="$BUILD/default.conf"
+# The sideloaded Android app's self-update (android/build.sh writes dist/):
+# served at /app/, in its own ConfigMap like hls.js. Optional; the pod
+# runs without it.
+APK_INPUTS=()
+if [ -f dist/fretzpod.apk ] && [ -f dist/version.json ] \
+   && python3 -c 'import json,sys; sys.exit(0 if (json.load(open(sys.argv[1])).get("android") or {}).get("url") else 1)' "$SITE/site.json"; then
+  # base64 in a ConfigMap (1 MiB): about 760 KB of APK at most.
+  [ "$(stat -c %s dist/fretzpod.apk)" -lt 760000 ] || { echo "dist/fretzpod.apk is too big for a ConfigMap"; exit 1; }
+  cm fretzpod-apk --from-file=fretzpod.apk=dist/fretzpod.apk --from-file=version.json=dist/version.json
+  APK_INPUTS=(dist/version.json)
+fi
 DEPLOYS=(fretzpod)
 manifests=(-f "$SITE/fretzpod.yaml")
 for helper in speakers scores; do
@@ -52,7 +63,7 @@ stamp() {
   kubectl -n "$NS" patch deploy "$1" --type merge \
     -p "{\"spec\":{\"template\":{\"metadata\":{\"annotations\":{\"fretzpod/inputs\":\"$2\"}}}}}"
 }
-stamp fretzpod "$(cat "$BUILD"/html/* "$BUILD"/vendor/* "$BUILD"/guide/* "$BUILD/default.conf" "$SITE/fretzpod.yaml" | sha256sum | cut -c1-16)"
+stamp fretzpod "$(cat "$BUILD"/html/* "$BUILD"/vendor/* "$BUILD"/guide/* "$BUILD/default.conf" "$SITE/fretzpod.yaml" "${APK_INPUTS[@]}" | sha256sum | cut -c1-16)"
 for helper in speakers scores; do
   if [ -f "$SITE/$helper.yaml" ]; then
     stamp "fretzpod-$helper" "$(cat "$helper/$helper.py" "$SITE/$helper.yaml" | sha256sum | cut -c1-16)"

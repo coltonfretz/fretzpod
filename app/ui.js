@@ -11,6 +11,7 @@ import { StarPinball, PINBALL_TABLES, PINBALL_BALLS, pinballSave, pinballOpen, l
 import { goldProgress, goldId, bodyOpen } from './bodies.js';
 import { Fishing, FISH_SPOTS, FISH_LURES, FISH_KINDS, fishSave, fishOpen, fishLockText } from './fishing.js';
 import * as scores from './scores.js';
+import * as update from './update.js';
 import { streamType } from './player.js';
 import { listSpeakers } from './speakers.js';
 import { HOLD_MS, HOLD_REPEAT_MS } from './wheel.js';
@@ -1981,10 +1982,47 @@ export class UI {
         // The User Guide (app/guide/, served at /guide/). A new tab or window:
         // leaving this page would stop the music.
         { label: 'User Guide', arrow: '\u2197\uFE0E', select: () => window.open('guide/', '_blank', 'noopener') },
+        // The sideloaded Android app updates itself (update.js).
+        ...(update.CAN_UPDATE ? [{ label: 'Software Update', arrow: true, select: (ui) => ui.push(ui.softwareUpdate()) }] : []),
         // Google Play wants the policy reachable from inside the app too.
         { label: 'Privacy Policy', arrow: '\u2197\uFE0E', select: () => window.open('https://coltonfretz.github.io/fretzpod/privacy.html', '_blank', 'noopener') },
       ],
     });
+  }
+
+  // Software Update (the sideloaded Android app; update.js, android
+  // Updater.java). Opens by hand from About, or by itself on the main menu
+  // when a new version turns up. Follows the app's news while on screen.
+  softwareUpdate() {
+    const s = () => update.status;
+    const busy = () => ['checking', 'downloading', 'installing'].includes(s().state);
+    const list = new List('Software Update', {
+      rows: [
+        { label: 'This Version', value: () => api.VERSION },
+        { label: 'Status', value: () => update.describe() || 'Not Checked' },
+        {
+          label: 'Install Now',
+          value: () => (s().state === 'available' || s().state === 'allow' ? '' : '-'),
+          select: (ui) => {
+            if (s().state !== 'available' && s().state !== 'allow') { ui.toast(busy() ? 'One moment' : 'Nothing to install'); return; }
+            ui.toast('Fretzpod restarts to finish');
+            update.install();
+          },
+        },
+        { label: 'Check Now', select: (ui) => { if (busy()) ui.toast('One moment'); else update.check(); } },
+        { label: 'Later', select: (ui) => { update.later(); ui.back(); } },
+      ],
+    });
+    const news = (e) => {
+      this.refresh(list);
+      if (this.top !== list) return;
+      if (e.detail.state === 'failed') { log(`update: ${e.detail.error}`); this.toast("Couldn't update"); }
+      if (e.detail.state === 'allow') this.toast('Allow Fretzpod, then Install Now');
+    };
+    window.addEventListener('fp-update', news);
+    list.leave = () => window.removeEventListener('fp-update', news);
+    if (s().state === 'idle' || s().state === 'failed') update.check();
+    return list;
   }
 
   confirmSignOut() {
