@@ -5,7 +5,7 @@ import { store, newId, log, clearLog } from './util.js';
 import site from './config.js';
 import { Local } from './offline.js';
 
-export const VERSION = '0.31.0';
+export const VERSION = '0.31.1';
 
 // Which Jellyfin this copy talks to. A site build (build.py with a
 // site.json) knows its server: by the address the app was opened at, else
