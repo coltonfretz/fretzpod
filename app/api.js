@@ -329,7 +329,13 @@ export const STORE_BITRATE = 256000;
 let stored = new Set();
 try { if (NATIVE) stored = new Set(JSON.parse(NATIVE.libraryIds())); } catch { stored = new Set(); }
 export const isStored = (id) => stored.has(id);
-export const storedCount = () => stored.size;
+// The sync adds songs in the background, so the list is read again on
+// coming back to the app and before going offline.
+function reloadStored() {
+  try { if (NATIVE) { stored = new Set(JSON.parse(NATIVE.libraryIds())); local = null; } } catch { /* keep the old list */ }
+}
+if (NATIVE) document.addEventListener('visibilitychange', () => { if (!document.hidden) reloadStored(); });
+export const storedCount = () => { reloadStored(); return stored.size; };
 
 // Offline: Jellyfin is out of reach and the phone has songs (main.js
 // decides). Every library call above answers from `lib()` meanwhile.
@@ -351,7 +357,21 @@ export function setOffline(on) {
 }
 const storedUrl = (id, startSec) => `/local/song/${id}.aac` + (startSec > 0 ? `?start=${startSec.toFixed(3)}` : '');
 
-// {songs, bytes, free, busy}, or null off the app.
+// The phone syncs the whole library by itself (android Sync.java), as the
+// person signed in here: it gets the server, user and Authorization header
+// whenever they change, and "" on sign-out (the songs stay).
+function tellSync() {
+  try { NATIVE?.librarySetAccount?.(session && JF ? JSON.stringify({ server: JF, userId: session.userId, auth: authHeader() }) : ''); }
+  catch (e) { log(`sync account: ${e.message}`); }
+}
+if (NATIVE) {
+  tellSync();
+  for (const ev of ['fp-signin', 'fp-signout', 'fp-server']) window.addEventListener(ev, tellSync);
+}
+// Settings > Phone Library > Sync Now. False if it couldn't be started.
+export const syncNow = () => { try { return !!NATIVE?.librarySyncNow?.(); } catch { return false; } };
+
+// {songs, bytes, free, busy, sync}, or null off the app.
 export function storedInfo() {
   try { return NATIVE ? JSON.parse(NATIVE.libraryInfo()) : null; } catch { return null; }
 }

@@ -1823,6 +1823,50 @@ export class UI {
     });
   }
 
+  // Settings > Phone Library (Android app): what's stored, room left, how
+  // the sync is doing (android Sync.java), and Sync Now. Updates itself
+  // every 2 s while on screen.
+  phoneLibrary() {
+    let i = api.storedInfo() || {};
+    const gb = (b) => ((b || 0) / 1e9).toFixed((b || 0) < 1e10 ? 1 : 0);
+    const ago = (t) => {
+      const m = Math.round((Date.now() - t) / 60000);
+      if (m < 1) return 'Just now';
+      if (m < 60) return `${m} min ago`;
+      if (m < 48 * 60) return `${Math.round(m / 60)} h ago`;
+      return `${Math.round(m / 1440)} days ago`;
+    };
+    const sync = () => {
+      const s = i.sync || {};
+      if (s.running && s.state === 'listing') return 'Getting list';
+      if (s.running) return `${(s.done || 0).toLocaleString()} of ${(s.total || 0).toLocaleString()}`;
+      if (s.state === 'failed') return 'Failed';
+      if (s.state === 'stopped') return 'Paused';
+      return s.last ? ago(s.last) + (s.failed ? ` · ${s.failed} failed` : '') : 'Never';
+    };
+    const list = new List('Phone Library', {
+      rows: [
+        { label: 'Songs', value: () => (i.songs || 0).toLocaleString() },
+        { label: 'Space', value: () => `${gb(i.bytes)} of ${gb((i.bytes || 0) + (i.free || 0))} GB` },
+        { label: 'Synced', value: sync },
+        {
+          label: 'Sync Now',
+          select: (ui) => {
+            if (i.sync?.state === 'failed' && i.sync.error) log(`last sync failed: ${i.sync.error}`);
+            ui.toast(api.syncNow() ? 'Syncing on Wi-Fi' : "Couldn't start the sync");
+          },
+        },
+      ],
+    });
+    const timer = setInterval(() => {
+      if (this.top !== list) return;
+      i = api.storedInfo() || i;
+      this.refresh(list);
+    }, 2000);
+    list.leave = () => clearInterval(timer);
+    return list;
+  }
+
   // A row for one setting: center goes on to the next value, ⏮/⏭ step back
   // or on, wrapping round (with up to nine bodies, one way round was a long
   // trip).
@@ -1852,12 +1896,7 @@ export class UI {
       opt('sleep'),
       { label: 'Sleep Mode', value: () => settings.name('sleepMode'), arrow: true, select: (ui) => ui.push(ui.scheduleMenu(opt, 'Sleep Mode', 'sleepMode', 'sleepFrom', 'sleepTo')) },
       { label: 'In the Car', arrow: true, select: (ui) => ui.push(ui.car()) },
-      ...(api.CAN_STORE ? [{ label: 'On Phone', value: () => {
-        const i = api.storedInfo();
-        if (!i) return '';
-        const gb = (b) => (b / 1e9).toFixed(b < 1e10 ? 1 : 0);
-        return `${i.songs} · ${gb(i.bytes)} of ${gb(i.bytes + i.free)} GB`;
-      } }] : []),
+      ...(api.CAN_STORE ? [{ label: 'Phone Library', arrow: true, select: (ui) => ui.push(ui.phoneLibrary()) }] : []),
       { label: 'About', arrow: true, select: (ui) => ui.push(ui.about()) },
       { label: 'Sign Out', arrow: true, select: (ui) => ui.push(ui.confirmSignOut()) },
     );
