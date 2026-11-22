@@ -306,12 +306,28 @@ export class Player extends Emitter {
   }
 
   // Which queue index the next segment should play, or null at the end.
+  // A song that failed moves on (Repeat One would just fail it again), and
+  // Repeat All wraps past it too: before 0.32.1 a failed last song stopped
+  // the music even with Repeat All on. A whole lap of failures in a row
+  // stops it, so a queue where nothing plays doesn't spin forever.
   nextQi(last) {
-    if (last.failed) return last.qi + 1 < this.queue.length ? last.qi + 1 : null;
+    const all = this.opts.repeat() === 'all' && !this.refill;
+    if (last.failed) {
+      if (this.failedRun() >= this.queue.length) { log('nothing in the queue would play'); return null; }
+      if (last.qi + 1 < this.queue.length) return last.qi + 1;
+      return all ? 0 : null;
+    }
     if (this.opts.repeat() === 'one') return last.qi;
     if (last.qi + 1 < this.queue.length) return last.qi + 1;
-    if (this.opts.repeat() === 'all' && !this.refill) return 0;
-    return null;
+    return all ? 0 : null;
+  }
+
+  // How many segments in a row at the end of the stream failed.
+  failedRun() {
+    const segs = this.s.segs;
+    let n = 0;
+    while (n < segs.length && segs[segs.length - 1 - n].failed) n++;
+    return n;
   }
 
   async grow() {
