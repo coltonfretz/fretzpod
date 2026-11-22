@@ -5,7 +5,7 @@ import { store, newId, log, clearLog } from './util.js';
 import site from './config.js';
 import { Local } from './offline.js';
 
-export const VERSION = '0.31.2';
+export const VERSION = '0.32.0';
 
 // Which Jellyfin this copy talks to. A site build (build.py with a
 // site.json) knows its server: by the address the app was opened at, else
@@ -32,8 +32,18 @@ export let SERVER_NAME = BYOS ? (savedServer()?.name || 'Jellyfin') : site.serve
 // assumes away (mobile data is the costly mistake).
 export const AWAY = BYOS || location.protocol === 'https:';
 // Fretzpod's own helpers (Speakers, High Scores) run beside a site's
-// server; the app build has none.
-export const HELPERS = !BYOS;
+// server, reached at the page's own /speakers/ and /scores/. The app build
+// has no site of its own, but if it was built with one (config.js
+// podHelpers, from site.json android.url) and is signed in to that site's
+// Jellyfin, it uses that site's helpers at its full address (nginx lets the
+// app's origin call /speakers/api/ and /scores/api/). Any other server:
+// none. Recomputed when the server changes (useServer).
+const sameServer = (a, b) => !!a && !!b && a.replace(/\/+$/, '') === b.replace(/\/+$/, '');
+const helperBase = () => !BYOS ? '/'
+  : site.podHelpers && sameServer(JF, site.podHelpers.server) ? site.podHelpers.url.replace(/\/*$/, '/')
+  : null;
+let HELPER_BASE = helperBase();
+export let HELPERS = HELPER_BASE !== null;
 
 // Same storage keys as the phase 0 test page, so a sign-in there carries over.
 function deviceId() {
@@ -87,7 +97,7 @@ const post = (path, body) => request(path, { method: 'POST', body: JSON.stringif
 // Errors carry .status (scores.js tells "name taken" from "offline").
 export async function podCall(base, path, body) {
   if (!HELPERS) { const e = new Error(`no ${base} here`); e.status = 404; throw e; }
-  const res = await fetch(`/${base}/api/${path}`, {
+  const res = await fetch(`${HELPER_BASE}${base}/api/${path}`, {
     method: body ? 'POST' : 'GET',
     headers: { Authorization: authHeader(), ...(body ? { 'Content-Type': 'application/json' } : {}) },
     body: body ? JSON.stringify(body) : undefined,
@@ -144,6 +154,8 @@ export function useServer(found) {
   if (session && JF !== found.url) clearSession();
   JF = found.url;
   SERVER_NAME = found.name;
+  HELPER_BASE = helperBase();
+  HELPERS = HELPER_BASE !== null;
   store.set('fp.server', JSON.stringify(found));
   log(`server set (${new URL(found.url).protocol.replace(':', '')})`);
   window.dispatchEvent(new Event('fp-server'));

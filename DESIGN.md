@@ -91,6 +91,7 @@ Sonos --PUBLIC_BASE/speakers/audio/<signed link>--> nginx --> fretzpod-speakers 
 
 - `fretzpod-speakers` (stdlib Python) holds the Home Assistant token and its own Jellyfin key, so neither reaches a phone or a speaker.
 - **Only allowed accounts.** It checks the phone's own Jellyfin sign-in (`/Users/Me`) against `ALLOWED_USERS`. Anyone else gets "not allowed" and never sees a Speakers menu.
+- **From the Android app too.** The app's pages have no site behind them, so it calls a site's helpers at the site's full address (`site.json` `android.url`), only while signed in to that site's Jellyfin (`api.js` `helperBase`). nginx gives the app's origin (`https://appassets.androidplatform.net`) CORS headers on `/speakers/api/` and `/scores/api/` only and answers their preflight. High Scores comes along the same way.
 - **Signed song links, not keys.** A Sonos downloads songs itself, and Home Assistant's history stores every address a speaker played. So the speakers only ever get links like `/speakers/audio/<song>.<mode>.<expiry>.<signature>.flac`: one song, 12 hours, useless for anything else.
 - Original files where Sonos can play them (MP3, AAC, FLAC up to 48 kHz), with byte ranges so the speaker can seek. Anything else is converted to 320k MP3.
 - Speaker state is read from the speaker itself over UPnP, because Home Assistant's copy can run about 30 s stale when the speakers can't push events back to it. Commands still go through Home Assistant.

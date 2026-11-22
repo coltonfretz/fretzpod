@@ -30,7 +30,9 @@ business and stays out of the repo.
 no site, no server. The person types their own Jellyfin's address at
 sign-in (api.js BYOS). Everything lands in one folder, out_dir/www/
 (default build-app/), served by the app at its root: the app files plus
-vendor/ and guide/. No nginx config and no helpers (Speakers, High Scores).
+vendor/ and guide/. No nginx config and no helpers of its own (Speakers,
+High Scores); if site/site.json has android.url and helpers, the app uses
+that site's helpers while it's signed in to that site's Jellyfin.
 
 site.json (see examples/site.json):
   serverName   "Sign in to <serverName>"
@@ -68,7 +70,14 @@ if APP_BUILD:
     site = {"jellyfin": {"default": "", "byHost": {}}}
     try:
         with open(os.path.join(ROOT, "site", "site.json")) as f:
-            site["prizesOpenFor"] = json.load(f).get("prizesOpenFor") or []
+            own = json.load(f)
+        site["prizesOpenFor"] = own.get("prizesOpenFor") or []
+        # The owner's site's helpers (Speakers, High Scores), for when the
+        # app is signed in to that site's Jellyfin (api.js helperBase).
+        pod = ((own.get("android") or {}).get("url") or "").strip()
+        server = ((own.get("jellyfin") or {}).get("default") or "").strip()
+        if pod and server and own.get("helpers"):
+            site["podHelpers"] = {"server": server.rstrip("/"), "url": pod.rstrip("/") + "/"}
     except FileNotFoundError:
         pass
 else:
@@ -117,6 +126,8 @@ if site.get("prizesOpenFor"):
     config["prizesOpenFor"] = list(site["prizesOpenFor"])
 if APP_BUILD:
     config["byos"] = True
+    if site.get("podHelpers"):
+        config["podHelpers"] = site["podHelpers"]
 with open(os.path.join(html, "config.js"), "w") as f:
     f.write("// Written by build.py from site/site.json. Edit that, not this.\n")
     f.write("export default " + json.dumps(config, indent=2) + ";\n")
