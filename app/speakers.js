@@ -166,6 +166,36 @@ class SpeakerPlayer extends Emitter {
     this.topUp();
   }
 
+  // Up Next (ui.js UpNext), same as the phone's. The speaker holds its own
+  // copy of the next AHEAD songs and has no "take one out", so a change
+  // inside that window loads the window again at the same spot (a short
+  // pause in the music); past it, only the queue here changes.
+  get upNextFrom() { return this.playing ? this.index + 1 : this.queue.length; }
+
+  remove(qi) {
+    if (!this.playing || qi < this.upNextFrom || qi >= this.queue.length) return false;
+    const inWindow = qi < this.base + this.sent;
+    this.queue.splice(qi, 1);
+    if (inWindow) this.load(this.index, this.position()); else this.save();
+    return true;
+  }
+
+  moveNext(qi) {
+    const at = this.upNextFrom;
+    if (!this.playing || qi <= at || qi >= this.queue.length) return qi === at;
+    const inWindow = qi < this.base + this.sent;
+    const [item] = this.queue.splice(qi, 1);
+    if (!inWindow) { this.playNext([item]); return true; }
+    this.queue.splice(at, 0, item);
+    this.load(this.index, this.position());
+    return true;
+  }
+
+  jump(qi) {
+    if (!this.playing || qi < 0 || qi >= this.queue.length) return;
+    this.load(qi);
+  }
+
   // Loads a window of the queue into the speaker and starts at song qi.
   load(qi, offset = 0) {
     this.index = qi;
@@ -457,6 +487,15 @@ export class Output extends Emitter {
   }
   playNext(items) { return this.p.playNext(items); }
   playLater(items) { return this.p.playLater(items); }
+  // TV borrows the lock screen's media panel (tv.js claimMedia). The phone's
+  // player is the one that fills it, so it's the one lent. Missing here
+  // from 0.28.0 to 0.33.0: TV threw "lendMediaSession is not a function".
+  lendMediaSession() { this.phone.lendMediaSession(); }
+  takeBackMediaSession() { this.phone.takeBackMediaSession(); }
+  get upNextFrom() { return this.p.upNextFrom; }
+  remove(qi) { return this.p.remove(qi); }
+  moveNext(qi) { return this.p.moveNext(qi); }
+  jump(qi) { return this.p.jump(qi); }
   toggle() { return this.p.toggle(); }
   next() { return this.p.next(); }
   prev() { return this.p.prev(); }

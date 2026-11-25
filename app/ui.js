@@ -230,6 +230,76 @@ class HoldMenu extends List {
   }
 }
 
+// Up Next: the songs still to come, in the order they'll play (from
+// RepriseOS, the iPod Classic firmware mod, 2026-11-25). Center plays one
+// now; hold it for Play Next (move it up), Remove from Up Next and the rest
+// of the song's menu. Rows are rebuilt from the queue on every render, since
+// the queue moves on under it as songs end; the selection follows its song.
+const UP_NEXT_SHOWN = 500;   // Shuffle Songs keeps refilling; no one scrolls past this
+class UpNext extends List {
+  constructor(ui) {
+    super('Up Next', { rows: [], empty: 'Nothing up next' });
+    this.ui = ui;
+    this.build();
+  }
+
+  build() {
+    const p = this.ui.player;
+    const keep = this.rows[this.sel]?.item;
+    const from = p.upNextFrom;
+    const to = Math.min(p.queue.length, from + UP_NEXT_SHOWN);
+    const rows = [];
+    for (let qi = from; qi < to; qi++) {
+      const item = p.queue[qi];
+      rows.push({
+        item, qi,
+        label: item.Name,
+        sub: api.artistOf(item),
+        select: (ui) => { ui.player.jump(qi); ui.showNowPlaying(); },
+        menu: () => this.ui.upNextMenu(item, qi),
+      });
+    }
+    this.rows = rows;
+    this.total = rows.length;
+    // Same song stays selected as the ones before it play and drop off.
+    const at = keep ? rows.findIndex((r) => r.item === keep) : -1;
+    this.sel = Math.max(0, Math.min(at >= 0 ? at : this.sel, rows.length - 1));
+    if (this.sel < this.top) this.top = this.sel;
+    if (this.sel >= this.top + this.visible) this.top = this.sel - this.visible + 1;
+    this.top = Math.max(0, Math.min(this.top, rows.length - this.visible));
+  }
+
+  render(view) {
+    this.build();
+    super.render(view);
+  }
+}
+
+// File Info (from RepriseOS too): what the file on the server is, and what
+// this phone plays it as. A full screen of label/value rows, like Settings.
+const kbps = (b) => `${Math.round(b / 1000)} kbps`;
+function fileInfoRows(item, full, playsAs) {
+  const src = full?.MediaSources?.[0];
+  const audio = src?.MediaStreams?.find((m) => m.Type === 'Audio');
+  const rows = [];
+  const add = (label, v) => { if (v) rows.push({ label, value: () => String(v) }); };
+  add('Length', item.RunTimeTicks ? fmt(item.RunTimeTicks / 1e7) : '');
+  add('Format', (audio?.Codec || src?.Container || '').toUpperCase());
+  add('Bitrate', (audio?.BitRate || src?.Bitrate) ? kbps(audio?.BitRate || src.Bitrate) : '');
+  add('Sample Rate', audio?.SampleRate ? `${(audio.SampleRate / 1000).toFixed(1).replace(/\.0$/, '')} kHz` : '');
+  add('Bit Depth', audio?.BitDepth ? `${audio.BitDepth}-bit` : '');
+  add('Channels', audio?.Channels === 1 ? 'Mono' : audio?.Channels === 2 ? 'Stereo' : audio?.Channels || '');
+  add('Size', src?.Size ? `${(src.Size / 1048576).toFixed(1)} MB` : '');
+  add('Plays As', playsAs);
+  add('Track', item.IndexNumber);
+  add('Disc', item.ParentIndexNumber && item.ParentIndexNumber > 1 ? item.ParentIndexNumber : '');
+  add('Year', item.ProductionYear);
+  add('Genre', (full?.Genres || item.Genres || []).map(prettyGenre).join(', '));
+  const added = full?.DateCreated || item.DateCreated;
+  add('Added', added ? new Date(added).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '');
+  return rows;
+}
+
 // Now Playing, laid out like the 6th/7th-gen iPod Classic. The wheel is the
 // volume; the center button switches it to scrubbing through the song.
 //
@@ -837,7 +907,8 @@ export class UI {
         if (what === 'song' && !player.playing) { this.back(); return; }
         this.render();
       }
-      if (what === 'song') this.refresh(this.homeList);   // its Now Playing row comes and goes
+      if (what === 'song') this.refresh(this.homeList);   // its Now Playing and Up Next rows come and go
+      if (what === 'song' && top instanceof UpNext) this.render();
     });
   }
 
@@ -1155,6 +1226,7 @@ export class UI {
       { label: 'Shuffle Songs', select: (ui) => ui.shuffleSongs() },
     ];
     const nowPlaying = { label: 'Now Playing', arrow: true, select: (ui) => ui.push(new NowPlaying(p)) };
+    const upNext = { label: 'Up Next', arrow: true, select: (ui) => ui.push(new UpNext(ui)) };
     // Sleep Mode by hand (sleep.js), when it's on in Settings.
     const sleepRow = { label: 'Sleep', select: () => window.dispatchEvent(new Event('fp-sleep')) };
     const list = this.homeList = new List('Fretzpod', { rows, split: true });
@@ -1181,6 +1253,11 @@ export class UI {
       const has = rows.includes(nowPlaying);
       if (p.playing && !has) rows.push(nowPlaying);
       if (!p.playing && has) rows.splice(rows.indexOf(nowPlaying), 1);
+      // Up Next sits just above Now Playing while there are songs to come.
+      const wantNext = p.playing && p.upNextFrom < p.queue.length;
+      const hasNext = rows.includes(upNext);
+      if (wantNext && !hasNext) rows.splice(rows.indexOf(nowPlaying), 0, upNext);
+      if (!wantNext && hasNext) rows.splice(rows.indexOf(upNext), 1);
       // Sleep sits right after Settings, away from Now Playing at the bottom,
       // so spinning down to Now Playing doesn't land on it (tester, 2026-11-09).
       const wantSleep = settings.get('sleepMode') !== 'off';
@@ -1617,11 +1694,7 @@ export class UI {
       },
     };
     const rows = [...(ctx.np ? [] : this.queueRows(one)), this.mixRow(s.Id), this.playlistRow(one), fav];
-    const artist = s.AlbumArtists?.[0];
-    if (artist?.Id && artist.Id !== ctx.artistId) rows.push(this.goRow('Go to Artist', (ui) => ui.artist(artist)));
-    if (s.AlbumId && s.AlbumId !== ctx.albumId) {
-      rows.push(this.goRow('Go to Album', (ui) => ui.album({ Id: s.AlbumId, Name: s.Album || 'Album' })));
-    }
+    rows.push(...this.goRows(s, ctx), this.infoRow(s));
     const menu = new HoldMenu(s.Name, { rows });
     const show = (on) => { fav.on = on; fav.label = on ? 'Remove from Favorites' : 'Add to Favorites'; };
     // Now Playing already knows; lists load without favorites (faster), so
@@ -1755,6 +1828,52 @@ export class UI {
         }).catch((e) => { log(`save: ${e.message}`); ui.toast("Couldn't load the songs"); });
       },
     };
+  }
+
+  // Go to Artist / Go to Album for a song, leaving out the place you're in.
+  goRows(s, ctx = {}) {
+    const rows = [];
+    const artist = s.AlbumArtists?.[0];
+    if (artist?.Id && artist.Id !== ctx.artistId) rows.push(this.goRow('Go to Artist', (ui) => ui.artist(artist)));
+    if (s.AlbumId && s.AlbumId !== ctx.albumId) {
+      rows.push(this.goRow('Go to Album', (ui) => ui.album({ Id: s.AlbumId, Name: s.Album || 'Album' })));
+    }
+    return rows;
+  }
+
+  // File Info: a screen of the song's file details (fileInfoRows).
+  infoRow(s) {
+    return this.goRow('File Info', (ui) => new List('File Info', {
+      fetch: () => api.fileInfo(s.Id).catch((e) => { log(`file info: ${e.message}`); return null; })
+        .then((full) => {
+          const rows = fileInfoRows(s, full, ui.playsAs(s));
+          return { rows, total: rows.length };
+        }),
+    }));
+  }
+
+  // What this phone plays a song as (File Info).
+  playsAs(s) {
+    if (this.player.speaker) return `On ${this.player.outputName}`;
+    if (api.isStored(s.Id) && !streamType?.mux) return `AAC ${kbps(api.STORE_BITRATE)}, on this phone`;
+    if (api.OFFLINE) return '';
+    const codec = this.player.basic ? 'MP3' : (streamType?.codec || 'aac').toUpperCase();
+    return `${codec} ${kbps(this.player.phone?.opts.bitrate() ?? 0)}`;
+  }
+
+  // Hold center in Up Next: move the song up, take it out, or the usual
+  // places to go from a song.
+  upNextMenu(s, qi) {
+    const p = this.player;
+    const done = (ui, ok, note) => {
+      ui.closeMenus();
+      ui.toast(ok ? note : 'That one is already starting');
+    };
+    const rows = [];
+    if (qi > p.upNextFrom) rows.push({ label: 'Play Next', select: (ui) => done(ui, p.moveNext(qi), 'Playing Next') });
+    rows.push({ label: 'Remove from Up Next', select: (ui) => done(ui, p.remove(qi), 'Removed') });
+    rows.push(this.playlistRow(() => Promise.resolve([s])), ...this.goRows(s), this.infoRow(s));
+    return new HoldMenu(s.Name, { rows });
   }
 
   goRow(label, make) {

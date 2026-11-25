@@ -5,7 +5,7 @@ import { store, newId, log, clearLog } from './util.js';
 import site from './config.js';
 import { Local } from './offline.js';
 
-export const VERSION = '0.32.1';
+export const VERSION = '0.33.0';
 
 // Which Jellyfin this copy talks to. A site build (build.py with a
 // site.json) knows its server: by the address the app was opened at, else
@@ -506,6 +506,18 @@ async function on_search(term, signal) {
     items({ searchTerm: term, IncludeItemTypes: 'Audio', Limit: 40, EnableImages: 'false' }, opts),
   ]);
   return { artists: artists.Items, albums: albumsRes.Items, songs: songsRes.Items };
+}
+
+// ---------- file info ----------
+
+// One song with its file details (format, bitrate, size, date added), for
+// File Info in the hold menu. Offline there's only what the phone saved.
+export async function fileInfo(id) {
+  if (OFFLINE) return lib().byId.get(id) || null;
+  const d = await request('/Items?' + qs({
+    userId: session.userId, Ids: id, Fields: 'MediaSources,DateCreated,Genres', EnableUserData: 'false', EnableImages: 'false',
+  }));
+  return d.Items?.[0] || null;
 }
 
 // ---------- lyrics ----------

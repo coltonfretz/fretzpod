@@ -144,24 +144,76 @@ export class Player extends Emitter {
   // song playing is never touched, so there's no gap or restart.
   playNext(items) {
     if (!this.playing) { this.play(items, 0); return; }
+    const at = this.keptQi() + 1;
+    this.dropAhead();
+    this.queue.splice(at, 0, ...items);
+    this.reopen();
+  }
+
+  // The queue index of the last song the stream keeps when the queue ahead
+  // changes: the one playing, or the next one if it's a second from
+  // starting (it counts as playing, so changes go after it).
+  keptQi() {
+    const s = this.s;
+    return s.segs[this.keptSegs() - 1]?.qi ?? this.index;
+  }
+
+  keptSegs() {
     const s = this.s;
     let k = Math.max(s.cur, 0) + 1;          // first segment after the one heard
-    // The next song is already a second from starting: it counts as playing,
-    // and the new songs go after it.
     const nx = s.segs[k];
     if (nx?.start !== undefined && this.el.currentTime >= nx.start - 1.5) k++;
-    const at = (s.segs[k - 1]?.qi ?? this.index) + 1;
-    this.queue.splice(at, 0, ...items);
+    return k;
+  }
+
+  // Drops the songs already in the stream after keptQi(), so pump() fetches
+  // whatever comes next in the queue as it stands now. The caller changes
+  // the queue, then calls reopen().
+  dropAhead() {
+    const s = this.s;
     if (s.basic) return;                     // finished() picks the next song when this one ends
-    const drop = s.segs.splice(k);
-    if (!drop.length) { this.reopen(); return; }
+    const drop = s.segs.splice(this.keptSegs());
+    if (!drop.length) return;
     for (const d of drop) d.dropped = true;
     s.chunks = s.chunks.filter((c) => !c.seg.dropped);
     if (s.fetching) { s.abort?.abort(); s.fetching = false; }
     // Audio already appended for them comes off the end; pump() does it once
     // the buffer is free, then lines the next append up where it started.
     if (drop[0].start !== undefined) s.trimFrom = drop[0].start;
+  }
+
+  // ---------- Up Next (ui.js UpNext) ----------
+  //
+  // The songs still to come: queue indexes after keptQi(). The one about to
+  // start can't be changed any more, so Up Next leaves it out.
+
+  get upNextFrom() { return this.playing ? this.keptQi() + 1 : this.queue.length; }
+
+  // Takes a song out of what's to come. False if it's already starting.
+  remove(qi) {
+    if (!this.playing || qi < this.upNextFrom || qi >= this.queue.length) return false;
+    this.dropAhead();
+    this.queue.splice(qi, 1);
     this.reopen();
+    return true;
+  }
+
+  // Moves a song from later in Up Next to right after the one playing.
+  moveNext(qi) {
+    const at = this.upNextFrom;
+    if (!this.playing || qi <= at || qi >= this.queue.length) return qi === at;
+    this.dropAhead();
+    const [item] = this.queue.splice(qi, 1);
+    this.queue.splice(at, 0, item);
+    this.reopen();
+    return true;
+  }
+
+  // Plays a song from Up Next now; the ones before it are skipped, like
+  // pressing ⏭ until it comes up.
+  jump(qi) {
+    if (!this.playing || qi < 0 || qi >= this.queue.length) return;
+    this.start(qi);
   }
 
   // Play Later: on the end of the queue.
