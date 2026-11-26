@@ -51,6 +51,10 @@ Why: tested on an Android phone with the screen off, every approach that started
 - **Not on iPhone** (Safari suspends Web Audio when the phone locks) and not in Basic mode (audio from Jellyfin's address reaches Web Audio as silence). A Sonos isn't affected; it has its own EQ.
 - `eq.tick()` logs "10 s of silence while playing" if the output goes quiet with the music running, the failure this design is guarding against.
 
+## The dedicated players' look
+
+The two Galaxy A15 players wear the Fretzflix colors. `Phone.dressOnce` (sideloaded build only) sets the FzFx wallpaper on the lock and home screens the first time the app runs as the home screen, and never again, so a wallpaper picked by hand stays. The image is `fretzflix-logo/solid.py`'s `fretzflix-phone-1080x2340.png`, kept in the APK as a quality-98 WebP (30 KB; the PNG's 170 KB pushed the APK past deploy.sh's 760 KB ConfigMap cap). An app can't set Samsung's Color palette, so Settings > Phone Colors opens that screen: turn it on, pick the violet swatch (it comes from the wallpaper), Apply. Dark mode dims wallpapers by default (`settings put system display_night_theme_wallpaper 0` stops it, adb only).
+
 ## Other browsers and computers
 
 Measured in real engines with Playwright:
