@@ -2114,7 +2114,12 @@ export class UI {
       { label: 'Sleep Mode', value: () => settings.name('sleepMode'), arrow: true, select: (ui) => ui.push(ui.scheduleMenu(opt, 'Sleep Mode', 'sleepMode', 'sleepFrom', 'sleepTo')) },
       { label: 'In the Car', arrow: true, select: (ui) => ui.push(ui.car()) },
       ...(api.CAN_STORE ? [{ label: 'Phone Library', arrow: true, select: (ui) => ui.push(ui.phoneLibrary()) }] : []),
-      ...(phone.isHome() ? [{ label: 'Phone Settings', arrow: '\u2197\uFE0E', select: () => phone.open('settings') }] : []),
+      ...(phone.isHome() ? [
+        { label: 'Phone Settings', arrow: '\u2197\uFE0E', select: () => phone.open('settings') },
+        // Samsung's Color palette: turn it on and Apply for the violet look
+        // the Fretzflix wallpaper gives it (Phone.java, dressOnce).
+        { label: 'Phone Colors', arrow: '\u2197\uFE0E', select: () => phone.open('colors') },
+      ] : []),
       { label: 'About', arrow: true, select: (ui) => ui.push(ui.about()) },
       { label: 'Sign Out', arrow: true, select: (ui) => ui.push(ui.confirmSignOut()) },
     );
