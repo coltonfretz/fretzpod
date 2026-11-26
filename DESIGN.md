@@ -41,6 +41,16 @@ Why: tested on an Android phone with the screen off, every approach that started
 - **Basic mode** is the last resort for browsers with no usable Media Source: a plain `<audio>` per song. It works anywhere, but on Android the music may stop between songs with the screen off.
 - Lyrics from Jellyfin when it has them. Timed lyrics follow the song (word by word or line by line); untimed ones are a page you scroll with your finger, since an even pace through them is a guess. Nothing fetched from outside.
 
+## EQ
+
+`app/eq.js`. The `<audio>` element goes through Web Audio: a preamp (the precut), ten peaking filters an octave wide at the iTunes graphic EQ's bands (32 Hz to 16 kHz), then crossfeed (each side also gets the other, low-passed at 700 Hz and 0.3 ms late; direct 0.72 + crossed 0.28, so bass stays level). Presets are the iPod's list, with shapes by ear; Custom is the ten bands set on the wheel, ±12 dB in half-dB steps, drawn as the filters' real response.
+
+- **Precut:** the whole chain is lowered by the curve's highest point plus 0.5 dB (from 200 points, 20 Hz to 20 kHz), like RepriseOS's Auto precut, so boosts can't clip. Bass Booster comes out about 7 dB quieter for it; that's the trade.
+- **Nothing is rerouted until it's needed and safe.** An element given to Web Audio can't be taken back, and a suspended context passes silence. So the graph is only built once EQ or Crossfeed is turned on, and only after the context reports `running` (the autoplay rule needs a tap; every tap and key tries `resume()`). Turned off again, the filters go flat and crossfeed to 0, but the audio stays routed until the page reloads.
+- **Screen off, tested on unit 1 (Galaxy A15, WebView 157) 2026-11-25:** Bass Booster + Crossfeed, locked for 10 minutes: the context stayed `running`, the output level was sampled every 5 s (an AnalyserNode on the output) and was never silent except the last fade-out of a song, and it went through 3 song changes. The wheel volume still works (the element's volume applies before Web Audio: 0.25 volume measured 0.24 of the level).
+- **Not on iPhone** (Safari suspends Web Audio when the phone locks) and not in Basic mode (audio from Jellyfin's address reaches Web Audio as silence). A Sonos isn't affected; it has its own EQ.
+- `eq.tick()` logs "10 s of silence while playing" if the output goes quiet with the music running, the failure this design is guarding against.
+
 ## Other browsers and computers
 
 Measured in real engines with Playwright:

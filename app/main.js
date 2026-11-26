@@ -9,6 +9,7 @@ import { UI } from './ui.js';
 import { CoverFlow } from './coverflow.js';
 import { CarMode } from './carmode.js';
 import { Output } from './speakers.js';
+import { Eq } from './eq.js';
 import { log } from './util.js';
 import { applyBodyExtras } from './bodies.js';
 import { Sleep } from './sleep.js';
@@ -61,6 +62,8 @@ const phone = new Player($('#audio'), {
 // Everything else talks to `player`: the phone, or a Sonos once one is picked
 // under Speakers (optional, allowed accounts only; speakers.js).
 player = new Output(phone, { repeat });
+// Settings > EQ and Crossfeed, on the phone's own playback (eq.js).
+const eq = new Eq(phone);
 window.addEventListener('fp-setting', (e) => { if (e.detail === 'repeat') player.loop = null; });
 
 let ui = null;
@@ -306,6 +309,7 @@ if (location.hostname === 'localhost') {
     coverflow(on) { forceCoverFlow = on; applyOrientation(); },
     basic() { player.basic = true; },
     player: phone,
+    eq,
     ui: () => ui,
     // Tiki Golf: fpDebug.golf().startHole(6) jumps to hole 7.
     golf() { return ui.top; },

@@ -14,6 +14,7 @@ import * as scores from './scores.js';
 import * as update from './update.js';
 import * as phone from './phone.js';
 import { streamType } from './player.js';
+import { Eq, EQ_WORKS, BANDS, GAIN_MAX, customGains, setCustomGains } from './eq.js';
 import { listSpeakers } from './speakers.js';
 import { HOLD_MS, HOLD_REPEAT_MS } from './wheel.js';
 import { Tv, tvData } from './tv.js';
@@ -836,6 +837,78 @@ class CoverFlowScreen {
   }
 
   leave() { this.cf.hide(); }
+}
+
+// Settings > EQ > Custom: the ten bands, with the curve they make drawn
+// above them (RepriseOS shows its response curve too). Center on a band
+// starts changing it with the wheel, half a dB a click; center again (or
+// MENU) stops. The curve is the real filters' response (Eq.curve).
+const SVG = 'http://www.w3.org/2000/svg';
+const svgEl = (tag, attrs) => {
+  const n = document.createElementNS(SVG, tag);
+  for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+  return n;
+};
+const fmtDb = (db) => `${db > 0 ? '+' : db < 0 ? '−' : ''}${Math.abs(db).toFixed(1)} dB`;
+const fmtHz = (f) => (f >= 1000 ? `${f / 1000} kHz` : `${f} Hz`);
+class CustomEq extends List {
+  constructor() {
+    super('Custom EQ', { rows: [], visible: 5 });
+    this.gains = customGains();
+    this.editing = false;
+    const rows = BANDS.map((f, i) => ({
+      label: fmtHz(f),
+      value: () => (this.editing && this.sel === i ? `‹ ${fmtDb(this.gains[i])} ›` : fmtDb(this.gains[i])),
+      select: () => { this.editing = !this.editing; },
+    }));
+    rows.push({
+      label: 'Reset to Flat',
+      select: () => { this.gains = BANDS.map(() => 0); this.save(); },
+    });
+    this.rows = rows;
+    this.total = rows.length;
+  }
+
+  turn(dir, step) {
+    if (!this.editing || this.sel >= BANDS.length) return super.turn(dir, 1);
+    const i = this.sel;
+    const next = Math.max(-GAIN_MAX, Math.min(GAIN_MAX, this.gains[i] + dir * 0.5));
+    if (next === this.gains[i]) return false;
+    this.gains[i] = next;
+    this.save();
+    return true;
+  }
+
+  back() {
+    if (!this.editing) return false;
+    this.editing = false;
+    return true;
+  }
+
+  save() {
+    setCustomGains(this.gains);
+    window.dispatchEvent(new CustomEvent('fp-setting', { detail: 'eq' }));
+  }
+
+  render(view) {
+    view.classList.remove('split');
+    const wrap = el('div', 'eq-view');
+    const W = 300, H = 100, n = 64;
+    const y = (db) => H / 2 - (db / GAIN_MAX) * (H / 2 - 6);
+    const svg = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, class: 'eq-graph', preserveAspectRatio: 'none' });
+    svg.append(svgEl('line', { x1: 0, x2: W, y1: y(0), y2: y(0), class: 'eq-zero' }));
+    const curve = Eq.curve(this.gains, n);
+    const pts = curve.map((db, i) => `${(i / (n - 1)) * W},${y(Math.max(-GAIN_MAX, Math.min(GAIN_MAX, db)))}`).join(' ');
+    svg.append(svgEl('polyline', { points: pts, class: 'eq-line' }));
+    if (this.sel < BANDS.length) {
+      const x = (Math.log10(BANDS[this.sel] / 20) / 3) * W;
+      svg.append(svgEl('line', { x1: x, x2: x, y1: 0, y2: H, class: 'eq-band' + (this.editing ? ' on' : '') }));
+    }
+    const body = el('div', 'eq-body');
+    super.render(body);
+    wrap.append(svg, body);
+    view.replaceChildren(wrap);
+  }
 }
 
 // Setting a time with the wheel, like the iPod's alarm clock: one step of the
@@ -2025,6 +2098,7 @@ export class UI {
   settings() {
     const opt = (k) => this.settingRow(k);
     const rows = [opt('shuffle'), opt('repeat'), opt('quality'), opt('clicker')];
+    rows.push(...this.eqRows(opt));
     // Firefox on Android ignores web vibration (and Safari has none), so say
     // so rather than offer a setting that does nothing. The Android app
     // vibrates natively, whatever browser the phone uses.
@@ -2051,6 +2125,37 @@ export class UI {
   // Ends, which only show while Mode is Scheduled (its key is 'night' in
   // both): elsewhere they'd be rows that do nothing (tester, 2026-11-09). A
   // time row opens the picker (TimePicker); ⏮/⏭ on it step a quarter hour.
+  // Settings > EQ and Crossfeed (eq.js). Not offered where it can't work:
+  // iPhone (Web Audio stops when the phone locks) and Basic mode.
+  eqRows(opt) {
+    if (!EQ_WORKS) {
+      const why = /iPhone|iPad/.test(navigator.userAgent) ? 'Not on iPhone' : 'Not supported';
+      return [{ label: 'EQ', value: () => why }];
+    }
+    if (this.player.basic) return [{ label: 'EQ', value: () => 'Not in Basic mode' }];
+    return [
+      { label: 'EQ', value: () => settings.name('eq'), arrow: true, select: (ui) => ui.push(ui.eqMenu()) },
+      opt('crossfeed'),
+    ];
+  }
+
+  // The presets in a list, like the iPod's Settings > EQ. Choosing one
+  // takes effect at once; Custom opens the bands to set.
+  eqMenu() {
+    const def = settings.defs.eq;
+    const choose = (v) => { settings.set('eq', v); window.dispatchEvent(new CustomEvent('fp-setting', { detail: 'eq' })); };
+    const rows = def.values.map((v) => ({
+      label: def.names[v],
+      value: () => (settings.get('eq') === v && v !== 'custom' ? '\u2713' : ''),
+      arrow: v === 'custom' ? true : undefined,
+      select: (ui) => { choose(v); if (v === 'custom') ui.push(new CustomEq()); },
+    }));
+    const at = Math.max(0, def.values.indexOf(settings.get('eq')));
+    const list = new List('EQ', { rows, start: at });
+    list.top = Math.max(0, Math.min(at - 3, rows.length - list.visible));   // the chosen one in sight
+    return list;
+  }
+
   scheduleMenu(opt, title, modeKey, fromKey, toKey) {
     const time = (k) => ({
       ...opt(k),

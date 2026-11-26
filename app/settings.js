@@ -12,6 +12,20 @@ const DEFS = {
   // Away from home (opened over https) defaults to Data saver: people on
   // mobile data and slow connections.
   quality: { label: 'Streaming', values: ['high', 'saver'], names: { high: 'High', saver: 'Data saver' }, def: AWAY ? 'saver' : 'high' },
+  // EQ presets (eq.js PRESETS) in the iPod's order, then Custom.
+  eq: {
+    label: 'EQ',
+    values: ['off', 'acoustic', 'bassBoost', 'bassCut', 'classical', 'dance', 'deep', 'electronic', 'hipHop', 'jazz',
+      'latin', 'loudness', 'lounge', 'piano', 'pop', 'rnb', 'rock', 'smallSpeakers', 'spokenWord', 'trebleBoost',
+      'trebleCut', 'vocal', 'custom'],
+    names: { off: 'Off', acoustic: 'Acoustic', bassBoost: 'Bass Booster', bassCut: 'Bass Reducer', classical: 'Classical',
+      dance: 'Dance', deep: 'Deep', electronic: 'Electronic', hipHop: 'Hip Hop', jazz: 'Jazz', latin: 'Latin',
+      loudness: 'Loudness', lounge: 'Lounge', piano: 'Piano', pop: 'Pop', rnb: 'R&B', rock: 'Rock',
+      smallSpeakers: 'Small Speakers', spokenWord: 'Spoken Word', trebleBoost: 'Treble Booster',
+      trebleCut: 'Treble Reducer', vocal: 'Vocal Booster', custom: 'Custom' },
+    def: 'off',
+  },
+  crossfeed: { label: 'Crossfeed', values: ['off', 'on'], names: { off: 'Off', on: 'On' }, def: 'off' },
   clicker: { label: 'Clicker', values: ['on', 'off'], names: { on: 'On', off: 'Off' }, def: 'on' },
   // Light is the 8 ms tick that felt right on a Galaxy Z Flip 6 (a crisp modern
   // vibration motor). Older phones' motors need 20-30 ms just to spin up, so
